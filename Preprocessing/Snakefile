@@ -22,13 +22,10 @@ rule trim_reads:
         f"{RAW_DIR}{{sample}}.fastq"
     output:
         f"{TRIMMED_DIR}{{sample}}_trimmed.fastq"
+    conda:
+        "envs/trimgalore.yaml"
     shell:
-        "echo 'trimming {input}' > {output}"
-
-rule map_reads:
-    input:
-        f"{TRIMMED_DIR}{{sample}}_trimmed.fastq"
-    output:
-        f"{MAPPED_DIR}{{sample}}.bam"
-    shell:
-        "echo 'mapping {input}' > {output}"
+        "echo 'trimming {input}' > {output}; trim_galore {input} --quality 20 --fastqc --length 20 --output_dir {output}"
+        
+        
+        
