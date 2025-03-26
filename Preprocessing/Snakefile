@@ -1,0 +1,34 @@
+#!python
+
+#!/usr/bin/env python3
+import os
+import math
+import Bio
+
+SAMPLES = set()
+sample_dict = {}
+
+SAMPLES = config["samples"].split(",")
+RAW_DIR = "raw/"
+TRIMMED_DIR = "trimmed/"
+MAPPED_DIR = "mapped/"
+
+rule all:
+    input:
+        expand(f"{MAPPED_DIR}{{sample}}.fastq sample=SAMPLES)
+
+rule trim_reads:
+    input:
+        f"{RAW_DIR}{{sample}}.fastq"
+    output:
+        f"{TRIMMED_DIR}{{sample}}_trimmed.fastq"
+    shell:
+        "echo 'trimming {input}' > {output}"
+
+rule map_reads:
+    input:
+        f"{TRIMMED_DIR}{{sample}}_trimmed.fastq"
+    output:
+        f"{MAPPED_DIR}{{sample}}.bam"
+    shell:
+        "echo 'mapping {input}' > {output}"
