@@ -15,7 +15,28 @@ MAPPED_DIR = "mapped/"
 
 rule all:
     input:
-        expand(f"{MAPPED_DIR}{{sample}}.fastq sample=SAMPLES)
+        expand(f"{TRIMMED_DIR}{{sample}}_trimmed.fastq sample=SAMPLES"),
+        gtf="reference/Homo_sapiens.GRCh38.111.gtf",
+
+        
+
+GTF_URL = "https://ftp.ensembl.org/pub/current_gtf/homo_sapiens/Homo_sapiens.GRCh38.111.gtf.gz"
+GTF_FILE = "reference/Homo_sapiens.GRCh38.111.gtf.gz"
+
+rule get_gtf:
+    output:
+        GTF_FILE
+    shell:
+        "mkdir -p reference && wget -O {output} {GTF_URL}"
+        
+rule unzip_gtf:
+    input:
+        GTF_FILE
+    output:
+        "reference/Homo_sapiens.GRCh38.111.gtf"
+    shell:
+        "gunzip -c {input} > {output}"
+        
 
 rule trim_reads:
     input:
@@ -28,4 +49,20 @@ rule trim_reads:
         "echo 'trimming {input}' > {output}; trim_galore {input} --quality 20 --fastqc --length 20 --output_dir {output}"
         
         
+rule multiqc:
+    input:
+        expand(f"{TRIMMED_DIR}{{sample}}_fastqc.zip", sample=SAMPLES),
+        expand(f"{TRIMMED_DIR}{{sample}}_trimmed_fastqc.zip", sample=SAMPLES)
+    output:
+        "multiqc_report.html"
+    conda:
+        "envs/multiqc.yaml"
+    shell:
+        "multiqc {TRIMMED_DIR} -o ."
         
+        
+        
+        
+        
+        
+
