@@ -12,12 +12,18 @@ SAMPLES = config["samples"].split(",")
 RAW_DIR = "raw/"
 TRIMMED_DIR = "trimmed/"
 MAPPED_DIR = "mapped/"
+STAR_INDEX = "star_index/SA"
+
+
 
 rule all:
     input:
         expand(f"{TRIMMED_DIR}{{sample}}_trimmed.fastq sample=SAMPLES"),
+        expand(f"{MAPPED_DIR}{{sample}}.bam sample=SAMPLES"),
+        expand(f"{MAPPED_DIR}{{sample}}.filtered.bam", sample=SAMPLES),
         gtf="reference/Homo_sapiens.GRCh38.111.gtf",
-
+        index=rules.star_index.output,
+        
         
 
 GTF_URL = "https://ftp.ensembl.org/pub/current_gtf/homo_sapiens/Homo_sapiens.GRCh38.111.gtf.gz"
@@ -61,8 +67,62 @@ rule multiqc:
         "multiqc {TRIMMED_DIR} -o ."
         
         
+rule star_index:
+    input:
+        fasta=GENOME_FASTA,
+        gtf=GTF_UNZIPPED
+    output:
+        directory("star_index")
+    threads: 8
+    conda:
+        "envs/star.yaml"
+    shell:
+        """
+        mkdir -p star_index
+        STAR \
+            --runThreadN {threads} \
+            --runMode genomeGenerate \
+            --genomeDir star_index \
+            --genomeFastaFiles {input.fasta} \
+            --sjdbGTFfile {input.gtf} \
+            --sjdbOverhang 100
+        """
         
         
-        
-        
+rule star_align:
+    input:
+        fastq=f"{TRIMMED_DIR}{{sample}}_trimmed.fq",
+        gtf=GTF_FILE
+    output:
+        bam=f"{MAPPED_DIR}{{sample}}.bam"
+    params:
+        index=STAR_INDEX
+    threads: 8
+    conda:
+        "envs/star.yaml"
+    shell:
+        """
+        STAR \
+            --genomeDir {params.index} \
+            --readFilesIn {input.fastq} \
+            --runThreadN {threads} \
+            --outFileNamePrefix star_out/{wildcards.sample}_ \
+            --outSAMtype BAM SortedByCoordinate \
+            --sjdbGTFfile {input.gtf}
 
+        mv star_out/{wildcards.sample}_Aligned.sortedByCoord.out.bam {output.bam}
+        """
+        
+        
+rule filter_bam:
+    input:
+        bam=f"{MAPPED_DIR}{{sample}}.bam"
+    output:
+        filtered_bam=f"{MAPPED_DIR}{{sample}}.filtered.bam"
+    conda:
+        "envs/samtools.yaml"
+    shell:
+        """
+        samtools view -b -F 260 -q 30 {input.bam} > {output.filtered_bam}
+        samtools index {output.filtered_bam}
+        """
