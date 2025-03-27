@@ -3,7 +3,6 @@
 #!/usr/bin/env python3
 import os
 import math
-import Bio
 
 SAMPLES = set()
 sample_dict = {}
@@ -13,21 +12,30 @@ RAW_DIR = "raw/"
 TRIMMED_DIR = "trimmed/"
 MAPPED_DIR = "mapped/"
 STAR_INDEX = "star_index/SA"
+GENOME_FASTA = "reference/genome.fa"
 
-
-
-rule all:
-    input:
-        expand(f"{TRIMMED_DIR}{{sample}}_trimmed.fastq sample=SAMPLES"),
-        expand(f"{MAPPED_DIR}{{sample}}.bam sample=SAMPLES"),
-        expand(f"{MAPPED_DIR}{{sample}}.filtered.bam", sample=SAMPLES),
-        gtf="reference/Homo_sapiens.GRCh38.111.gtf",
-        index=rules.star_index.output,
-        
-        
 
 GTF_URL = "https://ftp.ensembl.org/pub/current_gtf/homo_sapiens/Homo_sapiens.GRCh38.111.gtf.gz"
 GTF_FILE = "reference/Homo_sapiens.GRCh38.111.gtf.gz"
+GTF_UNZIPPED = "reference/Homo_sapiens.GRCh38.111.gtf"
+
+GENOME_FASTA_URL = "https://ftp.ensembl.org/pub/current_fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz"
+GENOME_FASTA_GZ = "reference/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz"
+GENOME_FASTA = "reference/genome.fa"
+
+print(SAMPLES)
+
+rule all:
+    input:
+        expand(f"{TRIMMED_DIR}" +"{sample}_trimmed.fastq", sample=SAMPLES),
+        expand(f"{MAPPED_DIR}" +"{sample}.bam", sample=SAMPLES),
+        expand(f"{MAPPED_DIR}" + "{sample}.filtered.bam", sample=SAMPLES),
+        gtf="reference/Homo_sapiens.GRCh38.111.gtf",
+        #index=rules.star_index.output,
+        #fasta=GENOME_FASTA,
+        genome_fa = "reference/genome.fa",
+        index = "star_index/SA"
+        
 
 rule get_gtf:
     output:
@@ -43,6 +51,19 @@ rule unzip_gtf:
     shell:
         "gunzip -c {input} > {output}"
         
+
+
+rule get_genome_fasta:
+    output:
+        fa=GENOME_FASTA
+    shell:
+        """
+        mkdir -p reference
+        wget -O {GENOME_FASTA_GZ} {GENOME_FASTA_URL}
+        gunzip -c {GENOME_FASTA_GZ} > {output}
+        """
+
+
 
 rule trim_reads:
     input:
@@ -72,7 +93,8 @@ rule star_index:
         fasta=GENOME_FASTA,
         gtf=GTF_UNZIPPED
     output:
-        directory("star_index")
+        directory("star_index"),
+        "star_index/SA"
     threads: 8
     conda:
         "envs/star.yaml"
@@ -91,7 +113,7 @@ rule star_index:
         
 rule star_align:
     input:
-        fastq=f"{TRIMMED_DIR}{{sample}}_trimmed.fq",
+        fastq=f"{TRIMMED_DIR}{{sample}}_trimmed.fastq",
         gtf=GTF_FILE
     output:
         bam=f"{MAPPED_DIR}{{sample}}.bam"
@@ -126,3 +148,7 @@ rule filter_bam:
         samtools view -b -F 260 -q 30 {input.bam} > {output.filtered_bam}
         samtools index {output.filtered_bam}
         """
+        
+
+        
+
