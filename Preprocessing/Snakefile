@@ -12,10 +12,11 @@ RAW_DIR = "raw/"
 TRIMMED_DIR = "trimmed/"
 MAPPED_DIR = "mapped/"
 STAR_INDEX = "star_index/SA"
+STAR_FOLDER = "star_index"
 GENOME_FASTA = "reference/genome.fa"
 
 
-GTF_URL = "https://ftp.ensembl.org/pub/current_gtf/homo_sapiens/Homo_sapiens.GRCh38.111.gtf.gz"
+GTF_URL = "https://ftp.ensembl.org/pub/current_gtf/homo_sapiens/Homo_sapiens.GRCh38.113.gtf.gz"
 GTF_FILE = "reference/Homo_sapiens.GRCh38.111.gtf.gz"
 GTF_UNZIPPED = "reference/Homo_sapiens.GRCh38.111.gtf"
 
@@ -27,12 +28,10 @@ print(SAMPLES)
 
 rule all:
     input:
-        expand(f"{TRIMMED_DIR}" +"{sample}_trimmed.fastq", sample=SAMPLES),
+        expand(f"{TRIMMED_DIR}" +"{sample}_trimmed.fq", sample=SAMPLES),
         expand(f"{MAPPED_DIR}" +"{sample}.bam", sample=SAMPLES),
         expand(f"{MAPPED_DIR}" + "{sample}.filtered.bam", sample=SAMPLES),
-        gtf="reference/Homo_sapiens.GRCh38.111.gtf",
-        #index=rules.star_index.output,
-        #fasta=GENOME_FASTA,
+        fasta=GENOME_FASTA,
         genome_fa = "reference/genome.fa",
         index = "star_index/SA"
         
@@ -73,7 +72,11 @@ rule trim_reads:
     conda:
         "envs/trimgalore.yaml"
     shell:
-        "echo 'trimming {input}' > {output}; trim_galore {input} --quality 20 --fastqc --length 20 --output_dir {output}"
+        """
+        trim_galore --quality 20 --fastqc --length 20 \
+            --output_dir {TRIMMED_DIR} {input}
+        """
+        
         
         
 rule multiqc:
@@ -113,12 +116,12 @@ rule star_index:
         
 rule star_align:
     input:
-        fastq=f"{TRIMMED_DIR}{{sample}}_trimmed.fastq",
-        gtf=GTF_FILE
+        fastq=f"{TRIMMED_DIR}{{sample}}_trimmed.fq",
+        gtf=GTF_UNZIPPED
     output:
         bam=f"{MAPPED_DIR}{{sample}}.bam"
     params:
-        index=STAR_INDEX
+        index=STAR_FOLDER
     threads: 8
     conda:
         "envs/star.yaml"
