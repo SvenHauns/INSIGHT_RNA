@@ -1,0 +1,10 @@
+name: rnafold
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - viennarna
+  - matplotlib
+  - numpy
+  - pandas

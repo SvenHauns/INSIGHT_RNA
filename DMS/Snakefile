@@ -1,0 +1,216 @@
+#!python
+
+#!/usr/bin/env python3
+import os
+import math
+
+SAMPLES = set()
+sample_dict = {}
+
+SAMPLES = config["samples"].split(",")
+RAW_DIR = "raw/"
+TRIMMED_DIR = "trimmed/"
+MAPPED_DIR = "../Preprocessing/mapped/"
+STAR_INDEX = "star_index/SA"
+STAR_FOLDER = "star_index"
+GENOME_FASTA = "../Preprocessing/reference/genome.fa"
+
+
+GENOME_FASTA_URL = "https://ftp.ensembl.org/pub/current_fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz"
+GENOME_FASTA_GZ = "reference/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz"
+
+
+COVERAGE_DIR = "coverage/"
+SEQUENCE_DIR = "sequences/"
+GFF_Path = "refseq_with_start_codon"
+GENOME = 'hg38'
+DMS_PROFILES = "profiles/"
+SVG_PROFILES = "svgs/"
+BIT_Data = "hg38.2bit"
+FUNCTION_FILE = "tools/in_fun.txt"
+TEXT_FILE = "tools/Ubuntu-Regular.ttf"
+
+
+print(SAMPLES)
+
+rule all:
+    input:
+        expand(f"{COVERAGE_DIR}{{sample}}.filtered_all.pkl", sample=SAMPLES),
+        expand(f"{COVERAGE_DIR}{{sample}}.filtered_all_formated.txt", sample=SAMPLES),
+        expand(f"{COVERAGE_DIR}{{sample}}.filtered_all.bed", sample=SAMPLES),
+        expand(f"{COVERAGE_DIR}{{sample}}.filtered_all_fixed.bed", sample=SAMPLES),
+        expand(f"{SEQUENCE_DIR}{{sample}}.filtered_all_sequences.bed", sample=SAMPLES),
+        expand(f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_all.txt", sample=SAMPLES)
+        
+
+
+rule get_target_regions:
+    input:
+        lambda wildcards: f"{MAPPED_DIR}{wildcards.sample}.filtered.bam"
+    output:
+        f"{COVERAGE_DIR}{{sample}}.filtered_99_20.pkl",
+        f"{COVERAGE_DIR}{{sample}}.filtered_95_20.pkl",
+        f"{COVERAGE_DIR}{{sample}}.filtered_90_20.pkl",
+        f"{COVERAGE_DIR}{{sample}}.filtered_all.pkl"
+    conda:
+        "envs/pysam.yaml"
+    shell:
+        """
+        mkdir -p {COVERAGE_DIR}
+        python scripts/get_candidates.py --gff_path {GFF_Path} --bamfile {input} --target_folder {COVERAGE_DIR}
+        """
+        
+rule convert_to_list:
+    input:
+        input1 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_99_20.pkl",
+        input2 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_95_20.pkl",
+        input3 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_90_20.pkl",
+        input4 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_all.pkl"
+    output:
+        output1_formated = f"{COVERAGE_DIR}{{sample}}.filtered_99_20_formated.txt",
+        output2_formated = f"{COVERAGE_DIR}{{sample}}.filtered_95_20_formated.txt",
+        output3_formated = f"{COVERAGE_DIR}{{sample}}.filtered_90_5_formated.txt",
+        output4_formated = f"{COVERAGE_DIR}{{sample}}.filtered_all_formated.txt",
+        output1 = f"{COVERAGE_DIR}{{sample}}.filtered_99_20.txt",
+        output2 = f"{COVERAGE_DIR}{{sample}}.filtered_95_20.txt",
+        output3 = f"{COVERAGE_DIR}{{sample}}.filtered_90_20.txt",
+        output4 = f"{COVERAGE_DIR}{{sample}}.filtered_all.txt"
+        
+    conda:
+        "envs/pysam.yaml"
+    shell:
+        """
+        mkdir -p {COVERAGE_DIR}
+        python scripts/create_list2_ref.py --output {output.output1} --formated_output {output.output1_formated} --input {input.input1}
+        python scripts/create_list2_ref.py --output {output.output2} --formated_output {output.output2_formated} --input {input.input2}
+        python scripts/create_list2_ref.py --output {output.output3} --formated_output {output.output3_formated} --input {input.input3}
+        python scripts/create_list2_ref.py --output {output.output4} --formated_output {output.output4_formated} --input {input.input4}
+        """
+        
+        
+rule get_bed_file:
+    input:
+        input1 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_99_20.pkl",
+        input2 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_95_20.pkl",
+        input3 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_90_20.pkl",
+        input4 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_all.pkl"
+    output:
+        f"{COVERAGE_DIR}{{sample}}.filtered_99_20.bed",
+        f"{COVERAGE_DIR}{{sample}}.filtered_95_20.bed",
+        f"{COVERAGE_DIR}{{sample}}.filtered_90_20.bed",
+        f"{COVERAGE_DIR}{{sample}}.filtered_all.bed"
+    conda:
+        "envs/pysam.yaml"
+    shell:
+        """
+        mkdir -p {COVERAGE_DIR}
+        python scripts/create_bed_from_list.py --folder {COVERAGE_DIR} --input {input.input1}
+        python scripts/create_bed_from_list.py --folder {COVERAGE_DIR} --input {input.input2}
+        python scripts/create_bed_from_list.py --folder {COVERAGE_DIR} --input {input.input3}
+        python scripts/create_bed_from_list.py --folder {COVERAGE_DIR} --input {input.input4}
+        """
+        
+        
+rule fix_bed:
+    input:       
+        input1 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_99_20.bed",
+        input2 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_95_20.bed",
+        input3 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_90_20.bed",
+        input4 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_all.bed"
+    output:
+        output1 = f"{COVERAGE_DIR}{{sample}}.filtered_99_20_fixed.bed",
+        output2 = f"{COVERAGE_DIR}{{sample}}.filtered_95_20_fixed.bed",
+        output3 = f"{COVERAGE_DIR}{{sample}}.filtered_90_20_fixed.bed",
+        output4 = f"{COVERAGE_DIR}{{sample}}.filtered_all_fixed.bed"
+    conda:
+        "envs/pysam.yaml"
+    shell:
+        """
+        mkdir -p {COVERAGE_DIR}
+        python scripts/fix_bed.py --output {output.output1} --input {input.input1}
+        python scripts/fix_bed.py --output {output.output2} --input {input.input2}
+        python scripts/fix_bed.py --output {output.output3} --input {input.input3}
+        python scripts/fix_bed.py --output {output.output4} --input {input.input4}
+        """
+
+rule extract_genomic_dna:
+    input:       
+        input1 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_99_20_fixed.bed",
+        input2 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_95_20_fixed.bed",
+        input3 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_90_20_fixed.bed",
+        input4 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_all_fixed.bed"
+    output:
+        output1 = f"{SEQUENCE_DIR}{{sample}}.filtered_99_20_sequences.bed",
+        output2 = f"{SEQUENCE_DIR}{{sample}}.filtered_95_20_sequences.bed",
+        output3 = f"{SEQUENCE_DIR}{{sample}}.filtered_90_20_sequences.bed",
+        output4 = f"{SEQUENCE_DIR}{{sample}}.filtered_all_sequences.bed"
+    conda:
+        "envs/extract.yaml"
+    shell:
+        """
+        mkdir -p {SEQUENCE_DIR}
+        python tools/extract_genomic_dna/extract_genomic_dna.py --input {input.input1} --genome {GENOME} --input_format interval --columns '1,2,3,6,4'  --reference_genome_source cached --reference_genome {BIT_Data} --output_format fasta --fasta_header_type bedtools_getfasta_default --output  {output.output1}
+        python tools/extract_genomic_dna/extract_genomic_dna.py --input {input.input2} --genome {GENOME} --input_format interval --columns '1,2,3,6,4'  --reference_genome_source cached --reference_genome {BIT_Data} --output_format fasta --fasta_header_type bedtools_getfasta_default --output  {output.output2}
+        python tools/extract_genomic_dna/extract_genomic_dna.py --input {input.input3} --genome {GENOME} --input_format interval --columns '1,2,3,6,4'  --reference_genome_source cached --reference_genome {BIT_Data} --output_format fasta --fasta_header_type bedtools_getfasta_default --output  {output.output3}
+        python tools/extract_genomic_dna/extract_genomic_dna.py --input {input.input4} --genome {GENOME} --input_format interval --columns '1,2,3,6,4'  --reference_genome_source cached --reference_genome {BIT_Data} --output_format fasta --fasta_header_type bedtools_getfasta_default --output  {output.output4}
+        """
+        
+
+rule extract_dms_profiles:
+    input:
+        input1_seq = lambda wildcards: f"{SEQUENCE_DIR}{wildcards.sample}.filtered_99_20_sequences.bed",
+        input2_seq = lambda wildcards: f"{SEQUENCE_DIR}{wildcards.sample}.filtered_95_20_sequences.bed",
+        input3_seq = lambda wildcards: f"{SEQUENCE_DIR}{wildcards.sample}.filtered_90_20_sequences.bed",
+        input4_seq = lambda wildcards: f"{SEQUENCE_DIR}{wildcards.sample}.filtered_all_sequences.bed",
+        input1_fixed_bed = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_99_20_fixed.bed",
+        input2_fixed_bed = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_95_20_fixed.bed",
+        input3_fixed_bed = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_90_20_fixed.bed",
+        input4_fixed_bed = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_all_fixed.bed",
+        input_bam = lambda wildcards: f"{MAPPED_DIR}{wildcards.sample}.filtered.bam",
+        input1_coverage_list = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_99_20.txt",
+        input2_coverage_list = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_95_20.txt",
+        input3_coverage_list = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_90_20.txt",
+        input4_coverage_list = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_all.txt",
+    output:
+        output1 = f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_99_20.txt",
+        output2 = f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_95_20.txt",
+        output3 = f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_90_20.txt",
+        output4 = f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_all.txt",
+    conda:
+        "envs/pysam.yaml"
+    params:
+        output_dict = lambda wildcards:  f"{DMS_PROFILES}{{sample}}/{SVG_PROFILES}"
+    shell:
+        """
+        mkdir -p {DMS_PROFILES}
+        mkdir -p {DMS_PROFILES}{{sample}}/{SVG_PROFILES}
+        python scripts/create_profile.py --coverage_list {input.input1_coverage_list} --extracted_sequences {input.input1_seq} --fixed_bed_file {input.input1_fixed_bed} --bam_file {input.input_bam} --save_path {params.output_dict} --output_file {output.output1}
+        python scripts/create_profile.py --coverage_list {input.input2_coverage_list} --extracted_sequences {input.input2_seq} --fixed_bed_file {input.input2_fixed_bed} --bam_file {input.input_bam} --save_path {params.output_dict} --output_file {output.output2}
+        python scripts/create_profile.py --coverage_list {input.input3_coverage_list} --extracted_sequences {input.input3_seq} --fixed_bed_file {input.input3_fixed_bed} --bam_file {input.input_bam} --save_path {params.output_dict} --output_file {output.output3}
+        python scripts/create_profile.py --coverage_list {input.input4_coverage_list} --extracted_sequences {input.input4_seq} --fixed_bed_file {input.input4_fixed_bed} --bam_file {input.input_bam} --save_path {params.output_dict} --output_file {output.output4}
+        """
+
+rule retrieve_rna_structure:
+    input:             
+        input1 =  lambda wildcards: f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_99_20.txt",
+        input2 =  lambda wildcards: f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_95_20.txt",
+        input3 =  lambda wildcards: f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_90_20.txt",
+        input4 =  lambda wildcards: f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_all.txt",
+    output:
+        output1 = f"{DMS_PROFILES}{{sample}}.filtered_99_20_summary.txt",
+        output2 = f"{DMS_PROFILES}{{sample}}.filtered_95_20_summary.txt",
+        output3 = f"{DMS_PROFILES}{{sample}}.filtered_90_20_summary.txt",
+        output4 = f"{DMS_PROFILES}{{sample}}.filtered_all_summary.txt"
+    conda:
+        "envs/rnafold.yaml"
+    shell:
+        """
+        mkdir -p {COVERAGE_DIR}
+        python scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input1} --structure_folder {} --summary {output.output1} --type {TEXT_FILE}
+        python scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input2} --structure_folder {} --summary {output.output2} --type {TEXT_FILE}
+        python scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input3} --structure_folder {} --summary {output.output3} --type {TEXT_FILE}
+        python scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input4} --structure_folder {} --summary {output.output4} --type {TEXT_FILE}
+        """
+        
+
+                                

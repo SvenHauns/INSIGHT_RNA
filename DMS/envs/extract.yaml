@@ -1,0 +1,8 @@
+name: pysam
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - bx-python=0.7.1
+  - six=1.13.0
