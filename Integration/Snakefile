@@ -1,0 +1,128 @@
+#!python
+
+#!/usr/bin/env python3
+import os
+import math
+
+SAMPLES = set()
+sample_dict = {}
+
+SAMPLES = config["samples"].split(",")
+
+
+RAW_DIR = "raw/"
+TRIMMED_DIR = "trimmed/"
+MAPPED_DIR = "../Preprocessing/mapped/"
+STAR_INDEX = "star_index/SA"
+STAR_FOLDER = "star_index"
+GENOME_FASTA = "../Preprocessing/reference/genome.fa"
+
+
+GENOME_FASTA_URL = "https://ftp.ensembl.org/pub/current_fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz"
+GENOME_FASTA_GZ = "reference/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz"
+
+
+COVERAGE_DIR = "coverage/"
+SEQUENCE_DIR = "sequences/"
+GFF_Path = "refseq_with_start_codon"
+GENOME = 'hg38'
+DMS_PROFILES = "profiles/"
+SVG_PROFILES = "svgs/"
+BIT_Data = "hg38.2bit"
+FUNCTION_FILE = "in_fun.txt"
+
+EXON_WINDOW_FILE ="files/exon_windows_with_junctions.bed"
+EXON_FILE = "files/exons.bed"
+FILE_FOLDER = "files/"
+refseq_file = "refseq_with_start_codon"
+COVERAGE = "coverage/"
+DESEQ_DATA = "deseq_data/"
+DESEQ_OUTPUT = "../OOPS3/deseq_output/"
+print(SAMPLES)
+TARGET = "targets/"
+TARGET_OUTPUT = "targets/output/"
+INPUT_DATA = "../DMS/profiles/save2/"
+EXON_FILE = "../OOPS3/files/exons.bed"
+
+rule all:
+    input:
+        expand(f"{TARGET}{{sample}}.combination_summary.txt", sample=SAMPLES),
+        expand(f"{TARGET}{{sample}}.peak_sequences.fa", sample=SAMPLES),
+        expand(f"{TARGET}{{sample}}.baseline_sequences.fa", sample=SAMPLES),
+        expand(f"{TARGET}{{sample}}.motifs/meme.txt", sample=SAMPLES),
+        expand(f"{TARGET}{{sample}}.varna_summary.txt", sample=SAMPLES),
+        
+rule combine_information:
+    input:
+        input_dms = lambda wildcards: f"{INPUT_DATA}{wildcards.sample}/{wildcards.sample}.dms_coverage_90_20.txt",
+        target_file = lambda wildcards: f"{TARGET}{wildcards.sample}.correlation_rnaplfold_oops_summary_target.txt",
+    output:
+        output_summary = f"{TARGET}{{sample}}.combination_summary.txt",
+    conda:
+        "envs/rnafold.yaml"
+    shell:
+        """
+        mkdir -p {TARGET_OUTPUT}
+        python scripts/combine_information.py \
+            --dms_analysis_file {input.input_dms} \
+            --target_file {input.target_file} \
+            --target_folder {TARGET_OUTPUT} \
+            --oops_seq_folder {DESEQ_OUTPUT} \
+            --summary {output.output_summary} \
+            --exon_file {EXON_FILE}
+        """
+        
+        
+rule extracted_background:
+    input:
+        input_dms = lambda wildcards: f"{INPUT_DATA}{wildcards.sample}/{wildcards.sample}.dms_coverage_90_20.txt",
+    output:
+        peak_sequences = f"{TARGET}{{sample}}.peak_sequences.fa",
+        baseline_file = f"{TARGET}{{sample}}.baseline_sequences.fa",
+    conda:
+        "envs/rnafold.yaml"
+    shell:
+        """
+        mkdir -p {TARGET_OUTPUT}
+        python scripts/extract_background_regions.py \
+            --dms_analysis_file {input.input_dms} \
+            --baseline_file {output.baseline_file} \
+            --oops_seq_folder {DESEQ_OUTPUT} \
+            --peak_sequences {output.peak_sequences} \
+            --exon_file {EXON_FILE}
+        """
+        
+rule run_meme:
+    input:
+        peaks = lambda wildcards: f"{TARGET}{{sample}}.peak_sequences.fa",
+        background = lambda wildcards: f"{TARGET}{{sample}}.baseline_sequences.fa",
+    output:
+        output_html = f"{TARGET}{{sample}}.motifs/meme.txt",
+    conda:
+        "envs/meme.yaml"
+    params:
+        output_folder = f"{TARGET}{{sample}}.motifs/"
+    shell:
+        """
+        mkdir -p {TARGET_OUTPUT}
+        python scripts/run_meme.py \
+            --input_sequences {input.peaks} \
+            --input_background_file {input.background} \
+            --output_html {params.output_folder} \
+        """
+        
+rule run_varna:
+    input:
+        summary = lambda wildcards: f"{TARGET}{{sample}}.combination_summary.txt",
+    output:
+        output_file = f"{TARGET}{{sample}}.varna_summary.txt",
+    conda:
+        "envs/java.yaml"
+    shell:
+        """
+        mkdir -p {TARGET_OUTPUT}
+        python scripts/run_varna.py \
+            --target_folder {TARGET_OUTPUT} \
+            --output_summary {output.output_file} \
+            --test {input.summary}
+        """
