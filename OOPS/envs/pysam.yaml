@@ -1,0 +1,12 @@
+name: pysam
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - pysam
+  - matplotlib
+  - numpy
+  - pandas
+  - psutil
+  - Bio

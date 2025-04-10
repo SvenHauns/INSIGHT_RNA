@@ -1,0 +1,121 @@
+#!python
+
+#!/usr/bin/env python3
+import os
+import math
+
+SAMPLES = set()
+sample_dict = {}
+
+SAMPLES = config["samples"].split(",")
+NC_FILES = config["nc"].split(",")
+CL_FILES = config["cl"].split(",")
+
+
+RAW_DIR = "raw/"
+TRIMMED_DIR = "trimmed/"
+MAPPED_DIR = "../Preprocessing/mapped/"
+STAR_INDEX = "star_index/SA"
+STAR_FOLDER = "star_index"
+GENOME_FASTA = "../Preprocessing/reference/genome.fa"
+
+
+GENOME_FASTA_URL = "https://ftp.ensembl.org/pub/current_fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz"
+GENOME_FASTA_GZ = "reference/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz"
+
+
+COVERAGE_DIR = "coverage/"
+SEQUENCE_DIR = "sequences/"
+GFF_Path = "refseq_with_start_codon"
+GENOME = 'hg38'
+DMS_PROFILES = "profiles/"
+SVG_PROFILES = "svgs/"
+BIT_Data = "hg38.2bit"
+FUNCTION_FILE = "in_fun.txt"
+
+EXON_WINDOW_FILE ="files/exon_windows_with_junctions.bed"
+EXON_FILE = "files/exons.bed"
+FILE_FOLDER = "files/"
+refseq_file = "refseq_with_start_codon"
+COVERAGE = "coverage/"
+DESEQ_DATA = "deseq_data/"
+DESEQ_OUTPUT = "deseq_output/"
+print(SAMPLES)
+
+rule all:
+    input:
+        EXON_WINDOW_FILE,
+        expand(f"{COVERAGE}{{sample}}.windows.txt", sample=SAMPLES),
+        f"{DESEQ_DATA}_data_meta.csv",
+        "deseq_summary.txt"
+        
+rule extract_bed:
+    input:
+        f"{FILE_FOLDER}{refseq_file}"
+    output:
+        output1 = EXON_WINDOW_FILE,
+        output2 = EXON_FILE
+    conda:
+        "envs/pysam.yaml"
+    shell:
+        """
+        mkdir -p {FILE_FOLDER}
+        python scripts/extract_bed.py --input_file {input} --output_file {output.output2} --output_window_file {output.output1}
+        """
+
+rule bedtools_coverage:
+    input:
+        input1 = lambda wildcards: f"{MAPPED_DIR}{wildcards.sample}.filtered.bam",
+        input2 = EXON_WINDOW_FILE
+    output:
+        f"{COVERAGE}{{sample}}.windows.txt",
+    conda:
+        "envs/bedtools.yaml"
+    shell:
+        """
+        mkdir -p {COVERAGE}
+        bedtools coverage -mean -a {input.input2} -b {input.input1} > {output}
+        """
+    
+print(CL_FILES)
+#CL_FILES = [c + ".windows.txt" for c in CL_FILES]
+#NC_FILES = [c + ".windows.txt" for c in NC_FILES]
+print(NC_FILES)
+
+rule create_deseq2_data:
+    input:
+        input1 = expand(f"{COVERAGE}{{sample}}.windows.txt", sample=CL_FILES),
+        input2 = expand(f"{COVERAGE}{{sample}}.windows.txt", sample=NC_FILES),
+    output:
+        meta_output = f"{DESEQ_DATA}_data_meta.csv",
+        
+    run:
+        cl_files = ",".join(input.input1)
+        nc_files = ",".join(input.input2)
+        
+        shell(f"""
+            mkdir -p {DESEQ_DATA}
+            python scripts/create_deseq2_data.py \
+                --crosslinked_files {cl_files} \
+                --non_crosslinked_files {nc_files} \
+                --meta_data_file {output.meta_output} \
+                --data_folder {DESEQ_DATA}
+        """)
+
+
+
+rule run_deseq2:
+    input:
+        meta_input = f"{DESEQ_DATA}_data_meta.csv",
+    output:
+        summary = f"deseq_summary.txt",
+    conda:
+        "envs/pydeseq.yaml"
+    params:
+        data = DESEQ_DATA,
+        output = DESEQ_OUTPUT
+    shell:
+        """
+        mkdir -p {DESEQ_OUTPUT}
+        python scripts/run_deseq2.py --input_meta_file {input.meta_input} --input_folder {params.data} --output_folder {params.output} --deseq_summary {output.summary}
+        """
