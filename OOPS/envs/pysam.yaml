@@ -10,3 +10,4 @@ dependencies:
   - pandas
   - psutil
   - Bio
+  - scikit-learn

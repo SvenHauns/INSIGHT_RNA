@@ -1,16 +1,12 @@
 import glob
 import pandas as pd
 import numpy as np
-import itertools
 import subprocess as sp
-import os
-import shutil
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 #import seaborn as sns
 from sklearn.mixture import GaussianMixture
 import numpy as np
-import time
-
+import argparse
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -62,7 +58,7 @@ def get_isoform_expression(tids, path = "/media/sven/Intenso/projects/24/oops/gi
 
 
 
-def collect_isoforms(path = "/media/sven/Intenso/projects/24/Zubradt_data/extract/refseq_with_start_codon"):
+def collect_isoforms(path):
     
     isoform_dict = {}
     tid_dict = {}
@@ -183,7 +179,7 @@ def plot_two_violins(data1, data2, labels, title="violin plot", xlabel="positive
 
 
 
-def get_exons(file_="/media/sven/Intenso/projects/24/oops/exons2.bed"):
+def get_exons(file_):
 
     file_ = open(file_).readlines()
     
@@ -193,7 +189,7 @@ def get_exons(file_="/media/sven/Intenso/projects/24/oops/exons2.bed"):
     for line_ in file_:
     
         id_ = line_.split("\t")[-1][1:-3]
-        
+        id_ = line_.split("\t")[3]
 
         
         if id_ not in dict_.keys():
@@ -201,9 +197,6 @@ def get_exons(file_="/media/sven/Intenso/projects/24/oops/exons2.bed"):
             dict_[id_] = line_.split("\t")[0]
 
         exon_dict[id_].append(line_.split("\t")[1] + "-" + line_.split("\t")[2])
-
-
-
 
 
     return dict_, exon_dict
@@ -270,8 +263,6 @@ def calculate_coverage_ratio(unique_regions, region, mean, print_,id_):
             
             
     if print_: print(invalid)
-    #if invalid == True: raise NotImplementedError
-    if id_ == "NM_001256799.3": raise NotImplementedError
     return invalid
 
 def calculate_isoform_coverage(iso_dict, tid_dict, exon_dict):
@@ -281,6 +272,7 @@ def calculate_isoform_coverage(iso_dict, tid_dict, exon_dict):
     unique_regions = {}
     
     counter = 0
+
 
     for key in iso_dict.keys():
          key_val = key
@@ -376,17 +368,61 @@ if __name__ == "__main__":
                                 help='output html',
                                 required = True,
                                 type=str)
-    cmdline_parser.add_argument('-g', '--track_output_n2',
+    cmdline_parser.add_argument('-i', '--track_table',
                                 default="",
                                 help='output html',
                                 required = True,
                                 type=str)
-    cmdline_parser.add_argument('-g', '--positive_tracks',
+    cmdline_parser.add_argument('-j', '--track_table_p',
                                 default="",
                                 help='output html',
                                 required = True,
                                 type=str)
-                                
+    cmdline_parser.add_argument('-k', '--track_table_p_z_score',
+                                default="",
+                                help='output html',
+                                required = True,
+                                type=str)
+    cmdline_parser.add_argument('-l', '--track_table_p_gm',
+                                default="",
+                                help='output html',
+                                required = True,
+                                type=str)
+    cmdline_parser.add_argument('-a', '--positive_tracks',
+                                default="",
+                                help='output html',
+                                required = True,
+                                type=str)
+    cmdline_parser.add_argument('-r', '--refseq_file',
+                                default="",
+                                help='output html',
+                                required = True,
+                                type=str)
+    cmdline_parser.add_argument('-b', '--exons',
+                                default="",
+                                help='output html',
+                                required = True,
+                                type=str)
+    cmdline_parser.add_argument('-y', '--track_output2',
+                                default="",
+                                help='output html',
+                                required = True,
+                                type=str)
+    cmdline_parser.add_argument('-m', '--file_trackb2',
+                                default="",
+                                help='output html',
+                                required = True,
+                                type=str)
+    cmdline_parser.add_argument('-n', '--file_track2_full',
+                                default="",
+                                help='output html',
+                                required = True,
+                                type=str)
+    cmdline_parser.add_argument('-x', '--file_track_fp2',
+                                default="",
+                                help='output html',
+                                required = True,
+                                type=str)
                                 
     args, unknowns = cmdline_parser.parse_known_args()
     
@@ -396,21 +432,30 @@ if __name__ == "__main__":
 
     files = glob.glob(args.deseq_output + "/*")
     file_a = open(args.track_output, "w")
+    file_a2 = open(args.track_output2, "w")
     file_track = open(args.track_output_p, "w")
     file_trackb = open(args.track_output_p2, "w")
     file_track2 = open(args.track_output_n, "w")
     file_track2b = open(args.track_output_n, "w")
     file_track_fp = open(args.positive_tracks,"w")
-
-
+    file_trackb2 = open(args.file_trackb2,"w")
+    file_track2_full = open(args.file_track2_full,"w")
+    file_track_fp2 = open(args.file_track_fp2,"w")
+    
+    
+    # file_trackb2 file_track2_full file_track_fp2
+    
+    
+    
     header = 'track name=window description="window" color=0,255,0,\n#chrom chromStart chromEnd\n'
 
     write_list = []
     regions_save = []
     regions_save_full = []
 
-    iso_dict, tid_dict, direction_dict = collect_isoforms()
-    chr_dict, exon_dict = get_exons()
+    iso_dict, tid_dict, direction_dict = collect_isoforms(args.refseq_file)
+    print(args.exons)
+    chr_dict, exon_dict = get_exons(args.exons)
 
 
     unique_regions = calculate_isoform_coverage(iso_dict, tid_dict, exon_dict)#
@@ -434,7 +479,7 @@ if __name__ == "__main__":
     for enum, file_ in enumerate(files):
     
     
-    
+        print(file_)
         try:
             df = pd.read_csv(file_)
         except:
@@ -447,79 +492,132 @@ if __name__ == "__main__":
         mean = df['baseMean']
     
         id_ = file_.split("/")[-1].split("_")[0] +"_" + file_.split("/")[-1].split("_")[1]
+        id_ = id_.split("|")[0]
+        
+
     
         if id_ not in tid_dict.keys(): continue
         gene = tid_dict[id_]
         all_tids = iso_dict[gene]
         direction = direction_dict[gene]
+        
+
     
         if tid_dict[id_] == "GAPDH": print_ = True
         else: print_ = False
 
 
         q1 = get_isoform_expression(all_tids)
-    
+
         if id_ not in unique_regions.keys(): continue
     
     
     
-        try:
-            chr_ = chr_dict[id_]
-            exons = exon_dict[id_]
-            invalid = calculate_coverage_ratio(unique_regions[id_], region, mean, print_, id_)
-            if invalid: invalid_coutner = invalid_coutner + 1
-            else: valid_coutner = valid_coutner + 1
+        #try:
+        chr_ = chr_dict[id_]
+        exons = exon_dict[id_]
+        exons = sorted(exons, key=lambda e: int(e.split("-")[0]))
+        invalid = calculate_coverage_ratio(unique_regions[id_], region, mean, print_, id_)
+        if invalid: invalid_coutner = invalid_coutner + 1
+        else: valid_coutner = valid_coutner + 1
         
-            if invalid: continue
+        if invalid: continue
         
-        except:
-            continue
+        #except:
+        #    continue
         
         exon_cov_dict = {}
-        
+
         for enum, reg in enumerate(region):
     
             if padj[enum] > 0 and padj[enum] < 0.05 and mean[enum] > 20:
                 found = False
+
                 correct_exon = None
             
-                for ex in exons: 
+                for enum, ex in enumerate(exons): 
 
 
                     if reg >= int(ex.split("-")[0]) and reg <= int(ex.split("-")[1]):
                         found = True
                         correct_exon = int(ex.split("-")[1])
+                        if enum < len(exons): next_exon = exons[enum+1:]
                         full_correct_exon = ex
                         if ex not in exon_cov_dict.keys(): exon_cov_dict[ex] = []
-                    
                         exon_cov_dict[ex].append(mean[enum])
                     
         
                 assert found == True
+                
+                save_tmp_list = []
+                save_full_tmp = []
+                save_data_tmp = []
             
-            
-                save = chr_ + "\t" + str(reg-1) + "\t" + str(min(reg+40, correct_exon)) + "\n"
-                save_full = chr_ + "\t" + str(reg) + "\t" + str(min(reg+40, correct_exon)) + "\t"  + id_ + "_" + str(enum) + "\t" + "bla" + "\t" + direction +"\n"
-            
-                save_data = [chr_, reg, min(reg+40, correct_exon), id_, gene, mean[enum], padj[enum], lf[enum]]
+                if reg+40 <= correct_exon:
+                    save = chr_ + "\t" + str(reg-1) + "\t" + str(min(reg+40, correct_exon)) + "\n"
+                    save_full = chr_ + "\t" + str(reg) + "\t" + str(min(reg+40, correct_exon)) + "\t"  + id_ + "_" + str(enum) + "\t" + "bla" + "\t" + direction +"\n"
+                    save_data = [chr_, reg, min(reg+40, correct_exon), id_, gene, mean[enum], padj[enum], lf[enum]]
+                    
+                    save_tmp_list.append(save)
+                    save_full_tmp.append(save_full)
+                    save_data_tmp.append(save_data)
+                    
+                    
+                    
+                else: 
+                    save = chr_ + "\t" + str(reg-1) + "\t" + str(min(reg+40, correct_exon)) + "\n"
+                    save_full = chr_ + "\t" + str(reg) + "\t" + str(min(reg+40, correct_exon)) + "\t"  + id_ + "_" + str(enum) + "\t" + "bla" + "\t" + direction +"\n"
+                    save_data = [chr_, reg, min(reg+40, correct_exon), id_, gene, mean[enum], padj[enum], lf[enum]]
+                    rest_ = reg+40 - correct_exon
+                    
+                    save_tmp_list.append(save)
+                    save_full_tmp.append(save_full)
+                    save_data_tmp.append(save_data)
+                    
+                    count_exons = 0
+                    while rest_ > 0:
+                        if count_exons >= len(next_exon): break
+                        current_exon_save = next_exon[count_exons]
+                        current_exon_save_start = int(current_exon_save.split("-")[0])
+                        current_exon_save_end = int(current_exon_save.split("-")[1])
+                        rest_ = current_exon_save_start+rest_ - current_exon_save_end
+                        
+                        save = chr_ + "\t" + str(current_exon_save_start-1) + "\t" + str(min(current_exon_save_start+rest_, current_exon_save_end)) + "\n"
+                        save_full = chr_ + "\t" + str(current_exon_save_start) + "\t" + str(min(current_exon_save_start+rest_, current_exon_save_end)) + "\t"  + id_ + "_" + str(enum) + "\t" + "bla" + "\t" + direction +"\n"
+                        save_data = [chr_, reg, min(current_exon_save_start+rest_, current_exon_save_end), id_, gene, mean[enum], padj[enum], lf[enum]]
+                        
+                        
+                        save_tmp_list.append(save)
+                        save_full_tmp.append(save_full)
+                        save_data_tmp.append(save_data)
+                        count_exons = count_exons + 1
+                        
+                        
+                        
+                for save_count, save in enumerate(save_tmp_list): 
     
-                if save not in regions_save:
-                    regions_save.append(save)
-                    regions_save_full.append(save_full)
-                    region_save_data.append(save_data)
-                    all_exons.append(full_correct_exon)
-                    if lf[enum] >0: 
-                        pos_lf.append(lf[enum])
-                        pos_lf_save.append(save)
-                        pos_lf_save_data.append(save_data)
-                        pos_lf_save_full.append(save_full)
-                        pos_lf_exons.append(full_correct_exon)
+                    if save not in regions_save:
+                        regions_save.append(save)
+                        regions_save_full.append(save_full_tmp[save_count])
+                        region_save_data.append(save_data_tmp[save_count])
+                        all_exons.append(full_correct_exon)
+                        
+                        
+                        """
+                        here
+                        """
+                        if lf[enum] >0: 
+                            pos_lf.append(lf[enum])
+                            pos_lf_save.append(save)
+                            pos_lf_save_data.append(save_data_tmp[save_count])
+                            pos_lf_save_full.append(save_full_tmp[save_count])
+                            pos_lf_exons.append(full_correct_exon)
                     
                     
-                    if lf[enum] <0: 
-                        neg_lf.append(lf[enum])
-                        neg_lf_save.append(save)
-                        neg_lf_exons.append(full_correct_exon)
+                        if lf[enum] <0: 
+                            neg_lf.append(lf[enum])
+                            neg_lf_save.append(save)
+                            neg_lf_exons.append(full_correct_exon)
 
         """
         for exon in exon_cov_dict.keys():
@@ -558,7 +656,6 @@ if __name__ == "__main__":
         current_chr = None
         
         for reg in pos_lf:
-            print(reg)
             start = int(reg.split("\t")[1])
             end = int(reg.split("\t")[2]) 
             chr_ = reg.split("\t")[0]
@@ -585,16 +682,9 @@ if __name__ == "__main__":
         return pos_lf_collapsed
 
 
-
-
-
     ind = sort_lists_by_two_indices([s.split("\t") for s in regions_save], 0, 1)
     regions_save = [regions_save[i] for i in ind]
-
-
     regions_save = collapse_regions(regions_save)
-
-
 
 
     file_a.write(header)
@@ -608,8 +698,8 @@ if __name__ == "__main__":
     for reg in regions_save_full:
          file_a2.write(reg)
 
-
-    write_table_data(np.array(region_save_data), "./il_20/all_lf.csv")
+    print(region_save_data)
+    write_table_data(np.array(region_save_data), args.track_table)
 
 
     print("positive")
@@ -656,7 +746,7 @@ if __name__ == "__main__":
         file_track_fp2.write(d)
     
 
-    write_table_data(np.array(pos_lf_save_data), "./il_20/lf+.csv")
+    write_table_data(np.array(pos_lf_save_data), args.track_table_p)
 
     outliers, index = modified_z_score_outliers(np.abs(neg_lf), pos_lf)
     print(len(outliers))
@@ -669,7 +759,7 @@ if __name__ == "__main__":
     ind = sort_lists_by_two_indices([s.split("\t") for s in data1], 0, 1)
     data1 = [data1[i] for i in ind]
 
-    write_table_data(np.array(pos_lf_save_data)[index], "./il_20/lf+_z_score.csv")
+    write_table_data(np.array(pos_lf_save_data)[index], args.track_table_p_z_score)
 
 
 
@@ -706,8 +796,8 @@ if __name__ == "__main__":
 
     data1 =  collapse_regions(data1)
 
-    ind = sort_lists_by_two_indices([s.split("\t") for s in data1], 0, 1)
-    data1 = [data1[i] for i in ind]
+    #ind = sort_lists_by_two_indices([s.split("\t") for s in data1], 0, 1)
+    #data1 = [data1[i] for i in ind]
 
 
     for d in data1:
@@ -715,9 +805,9 @@ if __name__ == "__main__":
     
     for d in data1b:
         file_trackb2.write(d)
+
     
-    
-    write_table_data(np.array(pos_lf_save_data)[index], "./il_20/lf+_gm.csv")
+    write_table_data(np.array(pos_lf_save_data)[index], args.track_table_p_gm)
 
     outliers, index = gmm_outlier_detection(pos_lf, np.abs(neg_lf))
     print(len(outliers))
@@ -726,85 +816,10 @@ if __name__ == "__main__":
     print(len(data1))
     data1 =  collapse_regions(data1)
 
-    ind = sort_lists_by_two_indices([s.split("\t") for s in data1], 0, 1)
-    data1 = [data1[i] for i in ind]
+    #ind = sort_lists_by_two_indices([s.split("\t") for s in data1], 0, 1)
+    #data1 = [data1[i] for i in ind]
 
 
     for d in data1:
         file_track2b.write(d)
-    raise NotImplementedError
-    plot_two_violins(pos_lf, neg_lf, labels = ["positive", "negative"])
     
-    print("failure_count")
-    print(failure_count)
-
-"""
-
-mean 50
-
-data
-42717
-60329
-12728
-[ True  True  True ... False  True False]
-1706
-[False False False ...  True  True  True]
-3217
-[False False False ... False False False]
-0
-[False False False ... False False False]
-
-
-giulia il 50:
-
-data
-23077
-12815
-4560
-[False False False ...  True  True  True]
-265
-[False False False ... False False False]
-303
-[False False False ... False False False]
-29
-[False False False ... False False False]
-
-
-giulia il_
-34528
-20529
-3301
-[False False False ... False False False]
-1596
-[False False False ... False False False]
-95
-[False False False ... False False False]
-294
-[False False False ... False False False]
-
-
-50
-23077
-4560
-
-34528
-3301
-
-
-34528
-20529
-3301
-[False False False ... False False False]
-1596
-[False False False ... False False False]
-217
-[False False False ... False False False]
-512
-[False False False ... False False False]
-
-
-is size factor applied
-
-"""
-
-
