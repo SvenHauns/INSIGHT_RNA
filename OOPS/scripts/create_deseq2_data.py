@@ -380,7 +380,7 @@ def create_counts_old(coverage_file, hisat1_counts, columns, set_columns = False
             
     return
     
-def to_csv(columns, dcits, data_folder):
+def to_csv(columns, dcits, rownames, data_folder):
 
     final_stack = []
     
@@ -395,8 +395,10 @@ def to_csv(columns, dcits, data_folder):
         column_names = columns[key]
         name = key
         
-
+        import numpy as np
         # Create the DataFrame
+
+
         df = pd.DataFrame(data, rownames, column_names)
         df.to_csv(data_folder + name + "_data.csv")
         final_stack = []
@@ -494,7 +496,7 @@ if __name__ == '__main__':
 
     
     
-    to_csv(columns, dcits, args.data_folder)
+    to_csv(columns, dcits, rownames, args.data_folder)
     
     
     df = pd.DataFrame(condition, rownames, ["condition"])

@@ -17,7 +17,7 @@ from pydeseq2.utils import load_example_data
 
 
 
-def run_deseq2(output_folder, input_folder, input_meta_file, run_checks = False):
+def run_deseq2(output_folder, input_folder, input_meta_file):
 
     OUTPUT_PATH = output_folder
     deseq_list = []
@@ -30,39 +30,39 @@ def run_deseq2(output_folder, input_folder, input_meta_file, run_checks = False)
 
     for file_ in files:
      
-        #try:
-            print(file_)
+        #print(file_)
+    
+        try:
+    
             name = file_.split("/")[-1].split("_data.csv")[0]
-
     
             counts_df = pd.read_csv(file_, index_col=0)
 
-            samples_to_keep = ~metadata_file.condition.isna()
+            meta_file_ = file_.split("_data.csv")[0] + "_meta.csv"
 
+
+
+            samples_to_keep = ~metadata_file.condition.isna()
             counts_df = counts_df.loc[samples_to_keep]
 
             metadata = metadata_file.loc[samples_to_keep]
-
-            if run_checks == True:
-                keep_sum = counts_df[counts_df.mean(axis=1) > 5].index
-                if len(list(keep_sum))==0: continue
-                common_elements1 = list(set(["NC1", "NC2", "NC3"]) & set(list(keep_sum)))
-                common_elements2 = list(set(["CL1", "CL2", "CL3"]) & set(list(keep_sum)))
     
-                if len(common_elements1) == 0: continue
-                if len(common_elements2) == 0: continue
+            keep_sum = counts_df[counts_df.mean(axis=1) > 5].index
 
-                counts_df = counts_df.loc[keep_sum]
-                metadata = metadata.loc[keep_sum]
+    
+            if len(list(keep_sum))==0: continue
+            common_elements1 = list(set(["NC1", "NC2", "NC3"]) & set(list(keep_sum)))
+            common_elements2 = list(set(["CL1", "CL2", "CL3"]) & set(list(keep_sum)))
+    
+            if len(common_elements1) == 0: continue
+            if len(common_elements2) == 0: continue
+            counts_df = counts_df.loc[keep_sum]
+            metadata = metadata.loc[keep_sum]
 
 
-                genes_to_keep = counts_df.columns[counts_df.sum(axis=0) >= 5]
-                counts_df = counts_df[genes_to_keep]
-
+            genes_to_keep = counts_df.columns[counts_df.sum(axis=0) >= 5]
+            counts_df = counts_df[genes_to_keep]
             counts_df = counts_df.astype(int)
-            print(counts_df)
-            print("meta data file")
-            print(metadata)
 
 
             inference = DefaultInference(n_cpus=8)
@@ -84,8 +84,8 @@ def run_deseq2(output_folder, input_folder, input_meta_file, run_checks = False)
             stat_res.results_df.to_csv(OUTPUT_PATH + name +  "_stat_results.csv")
             deseq_list.append(file_ + "\n")
 
-        #except:
-        #    print("Exception")
+        except:
+            print("Exception")
     return deseq_list
 
 if __name__ == '__main__':
@@ -111,19 +111,11 @@ if __name__ == '__main__':
                                 help='deseq summary file',
                                 required = True,
                                 type=str)
-    cmdline_parser.add_argument('-c', '--checks',
-                                default=True,
-                                help='deseq summary file',
-                                required = False,
-                                type=str)
 
     args, unknowns = cmdline_parser.parse_known_args()
-    deseq_list = run_deseq2(args.output_folder, args.input_folder, args.input_meta_file, args.checks)
+    deseq_list = run_deseq2(args.output_folder, args.input_folder, args.input_meta_file)
     
-    print("WRITE")
-    print(deseq_list)
-    print(args.deseq_summary)
+    
     file_ = open(args.deseq_summary, "w")
     file_.write("".join(deseq_list))
     file_.close()
-    print("END")

@@ -427,8 +427,8 @@ if __name__ == "__main__":
     args, unknowns = cmdline_parser.parse_known_args()
     
     
-    
-    
+
+
 
     files = glob.glob(args.deseq_output + "/*")
     file_a = open(args.track_output, "w")
@@ -648,14 +648,16 @@ if __name__ == "__main__":
     """
     unify peaks
     """
-    def collapse_regions(pos_lf):
-
+    def collapse_regions(pos_lf, table_data=[]):
+        print("table_data")
+        print(table_data)
         pos_lf_collapsed = []
         current_start = None
         current_end = None
         current_chr = None
+        current_tid = ""
         
-        for reg in pos_lf:
+        for enum, reg in enumerate(pos_lf):
             start = int(reg.split("\t")[1])
             end = int(reg.split("\t")[2]) 
             chr_ = reg.split("\t")[0]
@@ -665,18 +667,26 @@ if __name__ == "__main__":
                 current_start = start
                 current_end = end
                 current_chr = chr_
+                print("enum")
+                print(enum)
+                if table_data != []:print(table_data[enum])
+                if table_data != []:print(table_data[enum][3])
+                if table_data != []:print(table_data[enum][4])
+                if table_data != []: current_tid = table_data[enum][3] + "|" + table_data[enum][4]
     
             if current_end >= start and chr_ == current_chr:
                 current_end = end
     
             else:
-                pos_lf_collapsed.append(current_chr + "\t" + str(current_start) + "\t" + str(current_end) + "\n")
+                pos_lf_collapsed.append(current_chr + "\t" + str(current_start) + "\t" + str(current_end) + "\t" + current_tid + "\n")
         
                 current_start = start
                 current_end = end
                 current_chr = chr_
-            
-        pos_lf_collapsed.append(str(current_chr) + "\t" + str(current_start) + "\t" + str(current_end) + "\n")    
+                if table_data != []: current_tid = table_data[enum][3] + "|" + table_data[enum][4]
+        
+        if current_chr != None:
+            pos_lf_collapsed.append(str(current_chr) + "\t" + str(current_start) + "\t" + str(current_end) + "\t" + current_tid + "\n")    
 
 
         return pos_lf_collapsed
@@ -684,7 +694,10 @@ if __name__ == "__main__":
 
     ind = sort_lists_by_two_indices([s.split("\t") for s in regions_save], 0, 1)
     regions_save = [regions_save[i] for i in ind]
-    regions_save = collapse_regions(regions_save)
+    print("region_save_data")
+    print(region_save_data)
+    region_save_data_sorted = [region_save_data[i] for i in ind]
+    regions_save = collapse_regions(regions_save, region_save_data_sorted)
 
 
     file_a.write(header)
@@ -736,7 +749,10 @@ if __name__ == "__main__":
 
     ind = sort_lists_by_two_indices([s.split("\t") for s in pos_lf_save], 0, 1)
     pos_lf_save_order = [pos_lf_save[i] for i in ind]
-    pos_lf_save2 = collapse_regions(pos_lf_save_order)
+    pos_lf_save_data_sorted = [pos_lf_save_data[i] for i in ind]
+    print("here")
+    print(pos_lf_save_data)
+    pos_lf_save2 = collapse_regions(pos_lf_save_order, pos_lf_save_data_sorted)
 
 
     for d in pos_lf_save2:
@@ -754,10 +770,16 @@ if __name__ == "__main__":
     data1 = np.array(pos_lf_save)[index]
     data1b = np.array(pos_lf_save_full)[index]
 
-    data1 =  collapse_regions(data1)
 
     ind = sort_lists_by_two_indices([s.split("\t") for s in data1], 0, 1)
     data1 = [data1[i] for i in ind]
+
+    pos_lf_save_data_sorted = np.array(pos_lf_save_data)[index]
+    pos_lf_save_data_sorted = [pos_lf_save_data_sorted[i] for i in ind]
+
+
+    data1 =  collapse_regions(data1, pos_lf_save_data_sorted)
+
 
     write_table_data(np.array(pos_lf_save_data)[index], args.track_table_p_z_score)
 
@@ -773,6 +795,7 @@ if __name__ == "__main__":
     outliers, index = modified_z_score_outliers(pos_lf, np.abs(neg_lf))
     print(len(outliers))
     print(index)
+
     data1 = np.array(neg_lf_save)[index]
 
     ind = sort_lists_by_two_indices([s.split("\t") for s in data1], 0, 1)
@@ -783,18 +806,23 @@ if __name__ == "__main__":
         file_track2.write(d)
 
     
-    
     outliers, index = gmm_outlier_detection(np.abs(neg_lf), pos_lf)
     print(len(outliers))
     print(index)
+    print(pos_lf_save)
     data1 = np.array(pos_lf_save)[index]
     data1b = np.array(pos_lf_save_full)[index]
 
     ind = sort_lists_by_two_indices([s.split("\t") for s in data1], 0, 1)
     data1 = [data1[i] for i in ind]
 
+    pos_lf_save_data_sorted = np.array(pos_lf_save_data)[index]
+    pos_lf_save_data_sorted = [pos_lf_save_data_sorted[i] for i in ind]
 
-    data1 =  collapse_regions(data1)
+    print("data1")
+    print(data1)
+
+    data1 =  collapse_regions(data1, pos_lf_save_data_sorted)
 
     #ind = sort_lists_by_two_indices([s.split("\t") for s in data1], 0, 1)
     #data1 = [data1[i] for i in ind]
@@ -822,4 +850,6 @@ if __name__ == "__main__":
 
     for d in data1:
         file_track2b.write(d)
-    
+        
+        
+        ## turn off deseq controll
