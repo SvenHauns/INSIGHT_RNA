@@ -653,9 +653,13 @@ def etract_refseq_utr_genome_gff(annotation="/media/sven/Intenso/95_20_stuff/dat
     return utr_regions, gene_name_dict, strand_dict, chr_dict
     
     
-def etract_refseq_utr(gff_path):
+def etract_refseq_utr(gff_path, run_type = "full"):
 
+# IGFL1
 
+    print(run_type)
+    print(run_type)
+    print(run_type)
     hg_file = open(gff_path)
     exon_dict = {}
     start_dict = {}
@@ -687,7 +691,8 @@ def etract_refseq_utr(gff_path):
                 last_tid = transcript_id
                 
             gen_type_ = line.split("\t")[2]
-
+            
+        
             
             if gen_type_ == "exon":
                 gene_name_dict[transcript_id] = line.split("gene_id")[1].split(";")[0][2:-1]
@@ -696,11 +701,14 @@ def etract_refseq_utr(gff_path):
                 exon_dict[transcript_id].append([int(start), int(end)])
                 strand_dict[transcript_id] = line.split("\t")[6]
                 chr_dict[transcript_id] = line.split("\t")[0]
-            if gen_type_ == "start_codon":
+            if run_type != "3UTR" and gen_type_ == "start_codon":
                 start = line.split("\t")[3]
                 end = line.split("\t")[4]
                 start_dict[transcript_id]=[int(start), int(end)]
-                
+            elif run_type == "3UTR" and gen_type_ == "stop_codon":
+                start = line.split("\t")[3]
+                end = line.split("\t")[4]
+                start_dict[transcript_id]=[int(start), int(end)]
 
             if gen_type_ == "CDS":
                 haCDSs_dict[transcript_id] = True
@@ -712,9 +720,31 @@ def etract_refseq_utr(gff_path):
     
             
     hg_file.close()
+    
+    transcript_list2 = ["NM_198541.2"]
+    exon_dict2 = {"NM_198541.2":exon_dict["NM_198541.2"]}
+    start_dict2 = {"NM_198541.2":start_dict["NM_198541.2"]}
+    strand_dict2 = {"NM_198541.2":strand_dict["NM_198541.2"]}
+    
+    print(transcript_list2)
+    print(exon_dict2)
+    print(start_dict2)
+    
+    transcript_lists = transcript_list2
+    exon_dict = exon_dict2
+    start_dict = start_dict2
+    strand_dict = strand_dict2
+    
 
     #utr_regions = extract_utr_region(transcript_lists, exon_dict, start_dict, strand_dict)
-    utr_regions = extract_full_exon(transcript_lists, exon_dict, start_dict, strand_dict)
+    if run_type == "full": utr_regions = extract_full_exon(transcript_lists, exon_dict, start_dict, strand_dict)
+    elif run_type == "5UTR": utr_regions = extract_utr_region(transcript_lists, exon_dict, start_dict, strand_dict)
+    elif run_type == "3UTR":utr_regions = extract_3utr_region(transcript_lists, exon_dict, start_dict, strand_dict)
+    else: 
+        print("runtime not found")
+        raise NotImplementedError
+
+
 
 
     #print(strand_dict)
@@ -730,13 +760,7 @@ def etract_refseq_utr(gff_path):
         
         if chr_dict[key] == "chrMT":
             print("chrMT")
-        
-   # print(chr_dict)
-   
-
-    
-
-    
+            
     
     return utr_regions, gene_name_dict, strand_dict, chr_dict
 
@@ -757,13 +781,54 @@ def extract_full_exon(transcript_lists, exon_dict, start_dict, strand_dict):
     
     return utrs
 
+
+    
+def extract_3utr_region(transcript_lists, exon_dict, start_dict, strand_dict):
+
+    utrs = {}
+  
+    for key in transcript_lists:
+    
+        if exon_dict[key] == []:
+            continue
+        if start_dict[key] == []:
+            continue
+    
+        strand = strand_dict[key]
+        exon_dict_list = []
+
+        if strand == "+":
+
+            for exon in exon_dict[key]:
+                if exon[1] > start_dict[key][1]:
+            
+                    exon_dict_list.append(exon)
+                
+                    if exon[0] <= start_dict[key][0]:
+
+                        exon[0] = start_dict[key][1] + 1 
+                        
+        elif strand == "-":
+            for exon in exon_dict[key]:
+            
+                if exon[0] < start_dict[key][0]:
+                
+                    if exon[1] >= start_dict[key][1]:
+                        exon[1] = start_dict[key][0] - 1 
+                   
+                    exon_dict_list.append(exon)
+                
+        utrs[key] = exon_dict_list
+        exon_dict_list = []
+
+    return utrs
+    
+    
     
 def extract_utr_region(transcript_lists, exon_dict, start_dict, strand_dict):
 
     utrs = {}
     
-    #print(transcript_lists["NM_001354840.3"])
-
   
     for key in transcript_lists:
     
@@ -952,13 +1017,14 @@ if __name__ == '__main__':
     parser.add_argument("--gff_path", type=str, required=True, help="Path to gff file")
     parser.add_argument("--bamfile", type=str, required=True, help="Path to sample bam file")
     parser.add_argument("--target_folder", type=str, required=True, help="Path to output folder")
-    # Parse arguments
+    parser.add_argument("--run_type", type=str, required=True, help="run type")
+    
     args = parser.parse_args()
 
 
 
     # 1l beta
-    utr_regions, gene_name_dict, strand_dict, chr_dict = etract_refseq_utr(args.gff_path)
+    utr_regions, gene_name_dict, strand_dict, chr_dict = etract_refseq_utr(args.gff_path, args.run_type)
 
     return_chr_type = {"NC_000001":"chr1","NC_000002":"chr2","NC_000003":"chr3","NC_000004":"chr4","NC_000005":"chr5","NC_000006":"chr6","NC_000007":"chr7","NC_000008":"chr8","NC_000009":"chr9"
     ,"NC_000010":"chr10","NC_000011":"chr11","NC_000012":"chr12","NC_000013":"chr13","NC_000014":"chr14","NC_000015":"chr15","NC_000016":"chr16","NC_000017":"chr17","NC_000018":"chr18","NC_000019":"chr19",

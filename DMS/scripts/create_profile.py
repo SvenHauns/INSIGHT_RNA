@@ -16,10 +16,46 @@ import matplotlib.pyplot as plt
 import pickle
 from Bio import SeqIO
 import argparse
+import os
+import pickle
+
+def count_mutation(stat_stable_dict, stat_changed_dict, r, read, exon_end, exon_start):
+
+                
+    if r[1] < exon_end and r[1] >= exon_start:
+                
+        forward_string = read.get_forward_sequence()
+             
+        
+                     
+        if read.is_reverse: forward_string = forward_string[::-1]                
+        if r[2].islower() == False:
+             stat_stable_dict[forward_string[r[0]]] += 1
+        else:
+
+                        
+            if read.is_reverse == True:
+                        
+                if r[2] == "t": complement = "A"
+                if r[2] == "g": complement = "C"
+                if r[2] == "c": complement = "G"
+                if r[2] == "a": complement = "T"
+                            
+                            
+            else:
+                complement = r[2].upper()
+
+                        
+                        
+            if complement != "N" and forward_string[r[0]] != "N":
+                        
+                ke =  complement + "->" + forward_string[r[0]]
+                stat_changed_dict[ke] += 1
 
 
-
-
+    return stat_stable_dict, stat_changed_dict
+    
+    
 def autolabel(rects, ax, sum_):
 
     for rect in rects:
@@ -196,7 +232,7 @@ def norm_in_window(full_data_occupied, full_data_both_mutated_not_normd):
 
 
 
-def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage, coverage2, flag, sequences, bamfile_path, output_file, save_path, is_rna = False, bam_num = 0):
+def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage, coverage2, flag, sequences, bamfile_path, output_file, save_path, is_rna = False, bam_num = 0, stat_stable_dict = None, stat_changed_dict = None):
 
     saved_gene = [0,0,0,0,0]
     saved_gene2 = [0,0,0,0,0]
@@ -241,6 +277,9 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
     constraint_3_list = []
     constraint_4_list = []
     
+    print("exon_starts")
+    print(starts)
+    
 
     for enum, exon_starts in enumerate(starts):
     
@@ -259,7 +298,6 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
         full_data_forward_save = []
         full_data_forward_reverse = []
         full_data_reverse_save = []
-        
         
         
         for ex_num, exon_start in enumerate(exon_starts):
@@ -299,10 +337,11 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
     
                 read_pairs = read.get_aligned_pairs(matches_only = True, with_seq = True)
 
+
                 
                 for r in read_pairs:
                 
-                       
+
                     #if r[1] < exon_ends[ex_num] + 1 and r[1] >= exon_start:
                     
                     
@@ -312,10 +351,6 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
                     
                          l = [r for r in read_pairs if r[1] in range(exon_start, exon_ends[ex_num])]
 
-
-                         
-                         
-                    
                          if occupied_list[r[1]] == []: occupied_list[r[1]] = 0
                          occupied_list[r[1]] = occupied_list[r[1]] + 1
                     
@@ -347,9 +382,8 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
                                  if mutated_list_reverse[r[1]] == []: mutated_list_reverse[r[1]] = 0
                                  mutated_list_reverse[r[1]] = mutated_list_reverse[r[1]] + 1
                                  
+                         stat_stable_dict, stat_changed_dict = count_mutation(stat_stable_dict, stat_changed_dict, r, read, exon_ends[ex_num], exon_start)
                                  
-                                 
-
 
             full_data_forward_mutated = [0 if mutated_list_forward[x] == [] else mutated_list_forward[x] for x in range(exon_start, exon_ends[ex_num])]
             full_data_reverse_mutated = [0 if mutated_list_reverse[x] == [] else mutated_list_reverse[x] for x in range(exon_start, exon_ends[ex_num])]
@@ -504,7 +538,9 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
     raw_data_dms = ""
     for dms in window_forward:
         raw_data_dms = raw_data_dms + str(dms) + " "
-    
+    print("writing")
+    print(output_file)
+    print(name_)
     file_ = open(output_file, "a")
     file_.write(">")
     file_.write(name_)
@@ -518,6 +554,8 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
     file_.write(str(coverage_save))
     file_.write("\n")
     file_.close()
+    
+    print("DONE")
     
 
         
@@ -541,7 +579,10 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
 
     path = "/".join(output_file.split("/")[:-1])
     path_folder = path + "/" + "dms_0.04/"
-    os.mkdir(path_folder)
+    
+    print("path")
+    print(path)
+    if os.path.isdir(path_folder) == False: os.mkdir(path_folder)
     
     file_ = open(path_folder + output_file.split(".txt")[0].split("/")[-1] + "_" + name_ + "_0.04.txt", "a")
     file_.write(">")
@@ -554,7 +595,7 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
     file_.close()
     
     path_folder = path + "/" + "dms_0.06/"
-    os.mkdir(path_folder)
+    if os.path.isdir(path_folder) == False: os.mkdir(path_folder)
     
     file_ = open(path_folder + output_file.split(".txt")[0].split("/")[-1] + "_" + name_ +"_0.06.txt", "a")
     file_.write(">")
@@ -567,7 +608,7 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
     file_.close()
     
     path_folder = path + "/" + "dms_0.1/"
-    os.mkdir(path_folder)
+    if os.path.isdir(path_folder) == False: os.mkdir(path_folder)
     
     file_ = open(path_folder + output_file.split(".txt")[0].split("/")[-1] + "_" + name_ +"_0.1.txt", "a")
     file_.write(">")
@@ -580,7 +621,7 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
     file_.close()
     
     path_folder = path + "/" + "dms_0.25/"
-    os.mkdir(path_folder)
+    if os.path.isdir(path_folder) == False: os.mkdir(path_folder)
     
     file_ = open(path_folder + output_file.split(".txt")[0].split("/")[-1] + "_" + name_ +"_0.25.txt", "a")
     file_.write(">")
@@ -595,7 +636,7 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
 
     print("DONE: " + str(name_))
             
-    return normd_window_forward, full_data_occupied_list, sequences, name_
+    return normd_window_forward, full_data_occupied_list, sequences, name_,stat_stable_dict, stat_changed_dict
     
 
 
@@ -660,7 +701,7 @@ def create_fig(sequences, normd_windows, coverage, name_, strand, save_path):
         
     fig.suptitle(name_)
     
-
+    if os.path.isdir(save_path) == False: os.mkdir(save_path)
         
     plt.savefig(save_path + str(name_) +"_" +str(strand) + ".svg")
     plt.close()
@@ -1100,6 +1141,8 @@ if __name__ == '__main__':
     parser.add_argument("--bam_file", type=str, required=True, help="bam file")
     parser.add_argument("--save_path", type=str, required=True, help="path to save figures")
     parser.add_argument("--output_file", type=str, required=True, help="output_file prefix")
+    parser.add_argument("--stable_dict", type=str, required=True, help="stable dictionary")
+    parser.add_argument("--changed_dict", type=str, required=True, help="changed dictionary")
     # Parse arguments
     args = parser.parse_args()
     
@@ -1107,11 +1150,16 @@ if __name__ == '__main__':
 
 
 
-    files_ = open(args.coverage_list)
+    files_ = open(args.coverage_list).readlines()
     transcript_id_list = []
     chr_list = []
     starts = []
     ends = []
+    
+
+    
+    if files_ == []:
+        open(args.output_file, "w")
     
     for line in files_:
 
@@ -1132,9 +1180,6 @@ if __name__ == '__main__':
         starts.append([start_val])
         ends.append([end_val])
         
-
-    
-    files_.close()
 
     
     version_counter = 2
@@ -1225,6 +1270,12 @@ if __name__ == '__main__':
     
     run_from = False
     start_en = None
+    
+    stat_stable_dict = {"A": 0, "C": 0, "T": 0, "G": 0}
+    stat_changed_dict = {"A->C": 0, "A->T": 0, "A->G": 0, 
+                       "C->A": 0, "C->T": 0, "C->G": 0, 
+                       "G->A": 0, "G->T": 0, "G->C": 0, 
+                        "T->A": 0, "T->C": 0, "T->G": 0}
 
     
     for flag in flags:
@@ -1270,9 +1321,27 @@ if __name__ == '__main__':
    
             
             for bam_num, bam_file in enumerate(bam_file_list):
-
-                normd_window, full_data_occupied_list, sequence, name_= analysis_normd2(starts[en], ends[en], chr_, strand_sub[en][0] ,transcript_id_list[en],values1, values2,coverage1, coverage2, flag, seq_sub_list[en], bam_file, is_rna = is_rna_list[bam_num], bam_num = bam_num, save_path = args.save_path, output_file = args.output_file)
+                print(args.output_file)
+                print(args.output_file)
+                print(args.output_file)
+                print(args.output_file)
+                print(args.output_file)
+                print(args.output_file)
+                print(args.output_file)
+                print(args.output_file)
+                
+                normd_window, full_data_occupied_list, sequence, name_, stat_stable_dict, stat_changed_dict= analysis_normd2(starts[en], ends[en], chr_, strand_sub[en][0] ,transcript_id_list[en],values1, values2,coverage1, coverage2, flag, seq_sub_list[en], bam_file, is_rna = is_rna_list[bam_num], bam_num = bam_num, save_path = args.save_path, output_file = args.output_file, stat_stable_dict = stat_stable_dict, stat_changed_dict = stat_changed_dict)
                 normd_windows_for_bam.append(normd_window)
                 coverage_bam_list.append(full_data_occupied_list)
                 
+                print(stat_stable_dict)
+                print(stat_changed_dict)
+                
             create_fig(sequence, normd_windows_for_bam, coverage_bam_list,  name_, strand_sub[en][0], args.save_path)
+            
+
+    with open(args.stable_dict, 'wb') as fp:
+        pickle.dump(stat_stable_dict, fp)
+        
+    with open(args.changed_dict, 'wb') as fp:
+        pickle.dump(stat_changed_dict, fp)

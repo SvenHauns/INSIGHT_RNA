@@ -19,7 +19,8 @@ def run_varna(sequence, structure, output, highlight_region, dms_color_map):
 	    cmd = cmd.format(sequnence=sequence, structure=structure, dms_color_map = dms_color_map, output = output)
 	
 	log_file = "varna.log"
-	#print(cmd)
+	print("COMMAND")
+	print(cmd)
 	with open(log_file, 'w') as lf:
 		sp.call(shlex.split(cmd), stdout=lf)
         
@@ -45,11 +46,11 @@ if __name__ == "__main__":
                                 help='output html',
                                 required = True,
                                 type=str)
-    cmdline_parser.add_argument('-z', '--test',
+    cmdline_parser.add_argument('-z', '--version',
                                 default="",
                                 help='output html',
                                 required = True,
-                                type=str)
+                                type=int)
                                 
     args, unknowns = cmdline_parser.parse_known_args()
     print("starting run")
@@ -58,7 +59,13 @@ if __name__ == "__main__":
     
     print(target_folder)
     
-
+    append = ""
+    if args.version == 2:
+         append = "_5utr"
+    elif args.version == 3:
+         append = "_3utr"
+    
+    print(append)
     
     for folder in target_folder:
         folder_files = glob.glob(folder + "/*log*")
@@ -67,12 +74,28 @@ if __name__ == "__main__":
         for log_file_name in folder_files:
             print(log_file_name)
             log_file = open(log_file_name).readlines()
+            print("LOG_FILE")
+            print("LOG_FILE")
+            print("LOG_FILE")
+            print("LOG_FILE")
+            print("LOG_FILE")
+            print(log_file)
+            if log_file == []: continue
             id_ = log_file[0][:-1]
-            seq = log_file[1][:-1]
+            seqes = log_file[1][:-1]
+            print("seq")
+            print(seqes)
+            print(len(seqes))
             struc = log_file[2][:-1].split(" ")[0]
+            print(struc)
+            print(len(struc))
             output_file = log_file_name.split(".log")[0] + "_varna.png"
-            print(folder + "/complete_info.txt")
-            info_file = open(folder + "/complete_info.txt").readlines()
+            print(folder + "/complete_info" + str(append) + ".txt")
+            info_file = open(folder  + "/complete_info" + str(append) + ".txt").readlines()
+            print("dms")
+            print(info_file[0][:-1].split(" "))
+            print(len(info_file[0][:-1].split(" ")))
+
             dms_color_map = ",".join(info_file[0][:-1].split(" "))
             highlight_region = ""
             
@@ -81,7 +104,11 @@ if __name__ == "__main__":
         
             signal_list = []     
             sequence_list = []     
+            print("info_file")
+            print(folder  + "/complete_info" + str(append) + ".txt")
+            print(info_file)
             print(info_file[1][:-1].split(" "))
+            print(len(info_file[1][:-1].split(" ")))
             for enum, signal in enumerate(info_file[1][:-2].split(" ")):
                 if int(signal) == 0:
                     signal_list.append(enum)
@@ -95,13 +122,19 @@ if __name__ == "__main__":
             for seq in sequence_list:
                 start = seq[0]
                 end = seq[-1]
-                high_lights.extend([str(start) + "-" + str(end)])
+                high_lights.extend([str(start+1) + "-" + str(end+1)])
 
             if high_lights != []: high_lights_str = ";".join(high_lights)
             else : high_lights_str = high_lights
             print(high_lights_str)
             varna_files_created.append(output_file)
-            run_varna(seq, struc, output_file, high_lights_str, dms_color_map)
+            print("INPUT SEQ")
+            print("INPUT SEQ")
+            print("INPUT SEQ")
+            print("INPUT SEQ")
+            print("INPUT SEQ")
+            print(seqes)
+            run_varna(seqes, struc, output_file, high_lights_str, dms_color_map)
 
 file_ = open(args.output_summary, "w")
 file_.write("\n".join(varna_files_created))
