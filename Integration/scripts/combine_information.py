@@ -85,6 +85,7 @@ def RNAfold(prodigal_cmd, fasta_file, shape_file, target_file, id_):
 	fasta_file_preffix = fasta_file.rsplit('.', 1)[0]
 	output_pdf = fasta_file_preffix + '_proteins.fa'
 	prodigal_cmd += ' {input_fasta} --filename-full -p'
+	if shape_file== None: prodigal_cmd += " -C" 
 	if shape_file!= None: prodigal_cmd += " --shape {shape_file}" 
         
 	    
@@ -139,8 +140,233 @@ def get_exons(file_):
 
 
     return dict_, exon_dict
+
+
+def create_shape_file_constraint2(id_, seq, dms, dms_predicted, coverage, oops_signal, shape_file1, shape_file2, shape_file3, shape_file4, shape_file5, input_fasta, cutoff = 0.06):
+
+    input_fasta = open(input_fasta, "w")
+    input_fasta.write(id_)
+    input_fasta.write(seq+ "\n")
+    input_fasta.close()
+    
+    shape_file1 = open(shape_file1, "w")
+    shape_file1.write(id_)
+    shape_file1.write(seq+ "\n")
+    constraint = "".join(["x" if dms[enum] >= cutoff and coverage[enum] > 20 else "." for enum, _ in enumerate(dms)])
+    shape_file1.write(constraint)
+    shape_file1.close()
+    
+                
+    shape_file2 = open(shape_file2, "w")
+    shape_file2.write(id_)
+    shape_file2.write(seq+ "\n")
     
     
+    constraint = ""
+    for enum, _ in enumerate(dms):
+        if coverage[enum] > 20: 
+            if oops_signal[enum] == 1:
+                if dms[enum] >= cutoff: constraint = constraint + "x"
+                else: constraint = constraint + "."
+            else:
+                constraint = constraint + "x"
+        else:
+            constraint = constraint + "."
+
+    shape_file2.write(constraint)
+    shape_file2.close()
+                    
+                
+    shape_file3 = open(shape_file3, "w")
+    shape_file3.write(id_)
+    shape_file3.write(seq+ "\n")
+    
+    constraint = ""
+    for enum, _ in enumerate(dms):
+        if coverage[enum] > 20: 
+            if oops_signal[enum] == 1:
+                if dms[enum] >= cutoff: constraint = constraint + "x"
+                else: constraint = constraint + "."
+            else:
+                constraint = constraint + "|"
+        else:
+            constraint = constraint + "."
+            
+
+    shape_file3.write(constraint)
+    shape_file3.close()
+    
+    shape_file4 = open(shape_file4, "w")
+    shape_file4.write(id_)
+    shape_file4.write(seq+ "\n")
+
+    
+    constraint = ""
+    pred_cutoff = np.quantile(dms_predicted, 0.9)
+    for enum, _ in enumerate(dms):
+        if coverage[enum] > 20: 
+            if oops_signal[enum] == 1:
+                if dms[enum] >= cutoff and dms_predicted[enum] >= pred_cutoff: constraint = constraint + "x"
+                else: constraint = constraint + "."
+            else:
+                constraint = constraint + "x"
+        else:
+            constraint = constraint + "."
+
+    shape_file4.write(constraint)
+    shape_file4.close()
+    
+    
+    
+    shape_file5 = open(shape_file5, "w")
+    shape_file5.write(id_)
+    shape_file5.write(seq+ "\n")
+
+    
+    constraint = ""
+
+    pred_cutoff = np.quantile(dms_predicted, 0.9)
+    for enum, _ in enumerate(dms):
+        if coverage[enum] > 20: 
+            if oops_signal[enum] == 1:
+                if dms[enum] >= cutoff and dms_predicted[enum] >= pred_cutoff: constraint = constraint + "x"
+                else: constraint = constraint + "."
+            else:
+                constraint = constraint + "|"
+        else:
+            constraint = constraint + "."
+
+    shape_file5.write(constraint)
+    shape_file5.close()
+
+    
+    return
+
+
+
+def create_shape_file_constraint(id_, seq, dms, dms_predicted, coverage, oops_signal, shape_file1, shape_file2, shape_file3, shape_file4, shape_file5, input_fasta, cutoff = 0.06):
+
+    input_fasta = open(input_fasta, "w")
+    input_fasta.write(id_)
+    input_fasta.write(seq+ "\n")
+    input_fasta.close()
+    
+    shape_file1 = open(shape_file1, "w")
+    shape_file1.write(id_)
+    shape_file1.write(seq+ "\n")
+    constraint = "".join(["x" if dms[enum] >= cutoff else "." for enum, _ in enumerate(dms)])
+    shape_file1.write(constraint)
+    shape_file1.close()
+    
+    # oops-single oops-double oops-single-dms oops_double_dms
+    """
+    0 in oops_signal: single stranded
+    X in oops_signal: double stranded
+    U in oops_signal: either way
+    """
+    
+    shape_file2 = open(shape_file2, "w")
+    shape_file2.write(id_)
+    shape_file2.write(seq+ "\n")
+    
+    constraint = ""
+    for enum, _ in enumerate(dms):
+        #if coverage[enum] > 20: 
+            if oops_signal[enum] == "1":
+                if dms[enum] >= cutoff: constraint = constraint + "x"
+                else: constraint = constraint + "."
+            elif oops_signal[enum] == "0":
+                constraint = constraint + "x"
+            elif oops_signal[enum] == "X":
+                constraint = constraint + "|"
+            elif oops_signal[enum] == "U":
+                constraint = constraint + "x"
+        #else:
+        #    constraint = constraint + "."
+
+    shape_file2.write(constraint)
+    shape_file2.close()
+                    
+                
+    shape_file3 = open(shape_file3, "w")
+    shape_file3.write(id_)
+    shape_file3.write(seq+ "\n")
+    
+    constraint = ""
+    for enum, _ in enumerate(dms):
+        #if coverage[enum] > 20: 
+            if oops_signal[enum] == "1":
+                if dms[enum] >= cutoff: constraint = constraint + "x"
+                else: constraint = constraint + "."
+            elif oops_signal[enum] == "0":
+                constraint = constraint + "x"
+            elif oops_signal[enum] == "X":
+                constraint = constraint + "|"
+            elif oops_signal[enum] == "U":
+                constraint = constraint + "|"
+        #else:
+        #    constraint = constraint + "."
+            
+
+    shape_file3.write(constraint)
+    shape_file3.close()
+    
+    shape_file4 = open(shape_file4, "w")
+    shape_file4.write(id_)
+    shape_file4.write(seq+ "\n")
+
+    
+    constraint = ""
+    pred_cutoff = np.quantile(dms_predicted, 0.95)
+    for enum, _ in enumerate(dms):
+        #if coverage[enum] > 20: 
+            if oops_signal[enum] == "1":
+                if dms[enum] >= cutoff or dms_predicted[enum] >= pred_cutoff: constraint = constraint + "x"
+                else: constraint = constraint + "."
+            elif oops_signal[enum] == "0":
+                constraint = constraint + "x"
+            elif oops_signal[enum] == "X":
+                constraint = constraint + "|"
+            elif oops_signal[enum] == "U":
+                constraint = constraint + "x"
+        #else:
+        #    constraint = constraint + "."
+
+    shape_file4.write(constraint)
+    shape_file4.close()
+    
+    
+    
+    shape_file5 = open(shape_file5, "w")
+    shape_file5.write(id_)
+    shape_file5.write(seq+ "\n")
+
+    
+    constraint = ""
+
+    pred_cutoff = np.quantile(dms_predicted, 0.95)
+    for enum, _ in enumerate(dms):
+        #if coverage[enum] > 20: 
+            if oops_signal[enum] == "1":
+                if dms[enum] >= cutoff or dms_predicted[enum] >= pred_cutoff: constraint = constraint + "x"
+                else: constraint = constraint + "."
+            elif oops_signal[enum] == "0":
+                constraint = constraint + "x"
+            elif oops_signal[enum] == "X":
+                constraint = constraint + "|"
+            elif oops_signal[enum] == "U":
+                constraint = constraint + "|"
+        #else:
+        #   constraint = constraint + "."
+
+    shape_file5.write(constraint)
+    shape_file5.close()
+
+    
+    return
+
+
+
 def create_shape_file(id_, seq, dms, dms_predicted, coverage, oops_signal, shape_file1, shape_file2, shape_file3, shape_file4, shape_file5, input_fasta):
 
     input_fasta = open(input_fasta, "w")
@@ -241,6 +467,7 @@ def etract_refseq_utr(gff_path, run_type = "full"):
     start_dict = {}
     stop_dict = {}
     transcript_lists = []
+
     strand_dict = {}
     gene_name_dict = {}
     counter = 0
@@ -317,7 +544,7 @@ def etract_refseq_utr(gff_path, run_type = "full"):
         utr3_regions[key] = size
 
             
-    return utr5_regions, utr3_regions
+    return utr5_regions, utr3_regions, gene_name_dict
 
 def extract_full_exon(transcript_lists, exon_dict, start_dict, strand_dict):
     utrs = {}
@@ -454,6 +681,44 @@ def load_dataset(datafile, length_limit = 850, length_min = 100):
     return dataset
 
 
+def load_eClip_data(paths_to_data):
+
+    eClip_dict = {"chr1":[], "chr2":[], "chr3":[], "chr4":[], "chr5":[], "chr6":[], "chr7":[], "chr8":[], "chr9":[], "chr10":[], 
+    "chr11":[], "chr12":[], "chr13":[], "chr14":[], "chr15":[], "chr16":[], "chr17":[], "chr18":[], "chr19":[], "chr20":[], "chr21":[], 
+    "chr22":[], "chrX":[], "chrY":[], "chrM": []}
+    
+    print(paths_to_data)
+    print(glob.glob(paths_to_data + "/*"))
+
+    
+    for path_to_data in glob.glob(paths_to_data + "/*"):
+        folders = glob.glob(path_to_data + "/*")
+    
+        for folder in folders:
+            bedfiles = glob.glob(folder + "/*.bed")
+            for bedfile in bedfiles:
+                bedfile = open(glob.glob(bedfile+"/*.bed")[0]).readlines()
+            
+                for line in bedfile:
+                    chr_ = line.split("\t")[0]
+                    start = line.split("\t")[1]
+                    end = line.split("\t")[2]
+                    target = line.split("\t")[3]
+                    if chr_ not in eClip_dict.keys():continue
+                
+                    eClip_dict[chr_].append([int(start), int(end), target, folder.split("/")[-1]])
+                
+    return eClip_dict
+    
+    
+    
+def load_motif_data():
+
+
+    return
+    
+    
+
 class RNA_Dataset2(torch.utils.data.Dataset):
     def __init__(self,data):
         self.data=data
@@ -519,6 +784,20 @@ def get_model_prediction(model, sequence, step_size = 200):
     print(np.shape(prediction))
 
     return prediction
+    
+def find_region(eClip_list, start, end):
+
+    detected_region = []
+    for eclip in eClip_list:
+        if eclip[0] >= start:
+            if eclip[1] <= end:
+                detected_region.append(eclip)
+
+    return detected_region
+
+
+
+
 
 if __name__ == "__main__":
 
@@ -575,20 +854,57 @@ if __name__ == "__main__":
                                 help='model_path',
                                 required = True,
                                 type=str)
+    cmdline_parser.add_argument('-c', '--eclip_path',
+                                default="",
+                                help='path to eclip data',
+                                required = True,
+                                type=str)
 
 
     args, unknowns = cmdline_parser.parse_known_args()
     print(args.target_file)
     print(open(args.target_file).readlines())
+    
+    eClip_dict = load_eClip_data(args.eclip_path)
+    
+    print(eClip_dict)
+    
+    
+    strandedness = {"AKAP1": "single", 
+    "AQR": "unknown",
+    "EXOSC5": "double",
+    "FTO": "single",
+    "FXR2": "unknown",
+    "G3BP1": "single",
+    "KHSRP": "single",
+     "NIP7": "unknown",
+     "PABPN1": "single",
+     "PRPF4": "double",
+     "SAFB": "unknown",
+     "SDAD1": "unknown",
+     "SSB": "single",
+     "TIAL1": "unknown",
+     "UPF1": "single",
+     "YBX3": "single",
+     "ZNF800": "unknown",
+     "ABCF1": "unknown",
+     "CPEB4": "unknown",
+     "MATR3": "single",
+     "PCBP1": "single"}
 
 
-    utr5, utr3 = etract_refseq_utr(args.gff_path, run_type = "full")
+    utr5, utr3, gene_names = etract_refseq_utr(args.gff_path, run_type = "full")
 
-    targets = [t.split("\t")[-1][:-1] for t in open(args.target_file).readlines()]
+    targets = [t.split("\t")[-1] for t in open(args.target_file).readlines()]
     
     dms_file = open(args.dms_analysis_file).readlines()
     dms_targets_inds = [[d[1:-1], enum] for enum, d in enumerate(dms_file) if d[0] == ">"]
     dms_targets = [d[0] for d in dms_targets_inds]
+    print(len(dms_targets))
+    print(len(dms_targets_inds))
+
+    
+    #dms_targets = ["NM_004047.5", "NM_181697.3", "NM_001428.5"]
     
     oops_seq_files = glob.glob(args.oops_seq_folder + "*")
     print("oops_seq_files")
@@ -620,11 +936,15 @@ if __name__ == "__main__":
     
     print("iterate")
     print(dms_targets_inds)
+    test_count = 0
     
     for target_z in dms_targets_inds:
         target = target_z[0]
         print(target)
-        #if target != "XM_017001680.2": 
+        #if target != "XM_017001680.2":
+        gene_name = gene_names[target]
+        if test_count > 2: continue
+
             
         #    cont_ = False
         #if cont_: continue
@@ -636,10 +956,12 @@ if __name__ == "__main__":
         seq = dms_file[dms_targets_inds[ind][1]+1][:-1]
         dms = np.array([float(c) for c in dms_file[dms_targets_inds[ind][1]+2][:-1].split(" ") if c != ""])
         cov = [int(c) for c in dms_file[dms_targets_inds[ind][1]+4][:-1].split(" ") if c != ""]
+        dms_counts = [int(c) for c in dms_file[dms_targets_inds[ind][1]+3][:-1].split(" ") if c != ""]
+        dms_raw_signal = [int(c)/cov[enum] if cov[enum] >20 else 0 for enum, c in enumerate(dms_counts)]
         
         dms = (dms - dms.min()) / (dms.max() - dms.min())
 
-        dms_prediction = get_model_prediction(model, seq)
+
 
             
             
@@ -647,10 +969,12 @@ if __name__ == "__main__":
 
         utr5_len = utr5[target]
         utr3_len = utr3[target]
+        
+
 
         if oops_search not in oops_seq_folder_ids: continue
         oops_data = oops_seq_files[oops_seq_folder_ids.index(oops_search)]
-        
+
         oops_data = pd.read_csv(oops_data)
         regions = oops_data['Unnamed: 0']
         mean = oops_data['baseMean']
@@ -662,21 +986,84 @@ if __name__ == "__main__":
         ################################################################################
         
         selected_region = [r for enum, r in enumerate(regions) if mean[enum] >= 50 and padj_val[enum] < 0.05] # select-non significant regions for analysis
-            
+        #selected_region = [r for enum, r in enumerate(regions) if mean[enum] >= 50 and padj_val[enum] > 0.05] # select-non significant regions for analysis
+        
+        if len(selected_region) == 0: continue
+        
         exons = sorted(exon_dict[id_[1:-1]], key=lambda l:int(l.split("-")[0]))
             
         lengths = [int(e.split("-")[1]) - int(e.split("-")[0]) for e in exons]
-        print("calculate signal_fade_out")
-        print(exons)
-        print("selected_region")
-        print(selected_region)
-        
-        print(lengths)
 
+        chr_ = dict_[id_[1:-1]]
+
+        chr_eClip = eClip_dict[chr_]
+
+
+        
+        found_regions = []
             
-        signal_fade_out = [1 for _ in range(len(seq))]
+        signal_fade_out = ["1" for _ in range(len(seq))]
+        
+        selected_eclips = []
+        
         for region_selected in selected_region:
+        
+        
+            regions = find_region(chr_eClip, region_selected, region_selected+40)
+            
+            if len(regions) == 0: continue
+            print(regions)
+            
+            for region in regions: 
+                print(region)
+                
+                ss_strand = strandedness[region[-1]] 
+                
+                print(ss_strand)
+                
+
+                for exon_num, exon_range in enumerate(exons):
+            
+                    if (int(region[0]) >= int(exon_range.split("-")[0])) and (int(region[0]) < int(exon_range.split("-")[1])):
+
+                        offset = int(region[0]) - int(exon_range.split("-")[0])
+
+                   
+                        if exon_num>0:
+
+                   
+                            offset = offset + sum(lengths[:exon_num])
+                            #offset = offset + lengths[exon_num-1]
+
+                        dms_raw_signal_in_region = dms_raw_signal[offset:offset+(region[1]-region[0])]
+                        
+                        sig_dms_signals = sum([1 for d in dms_raw_signal_in_region if d > 0.06])
+                        
+                        if sig_dms_signals != 0 or ss_strand == "single":
+                            signal_fade_out[offset:offset+(region[1]-region[0])] = ["0" for _ in range(0,len(signal_fade_out[offset:offset+(region[1]-region[0])]))]
+                        elif ss_strand == "double":
+                            signal_fade_out[offset:offset+(region[1]-region[0])] = ["X" for _ in range(0,len(signal_fade_out[offset:offset+(region[1]-region[0])]))]
+                        elif ss_strand == "unknown":
+                            signal_fade_out[offset:offset+(region[1]-region[0])] = ["U" for _ in range(0,len(signal_fade_out[offset:offset+(region[1]-region[0])]))]
+                        
+                        start = offset
+                        end = offset+(region[1]-region[0])
+                        to_append = region.copy()
+                        to_append.extend([ss_strand, start, end])
+                        found_regions.append(to_append)
+
+                        
+        if found_regions == []: continue
+        dms_prediction = get_model_prediction(model, seq)
+
+        """           
+            
+            
+        
             for exon_num, exon_range in enumerate(exons):
+            
+            
+            
                if (int(region_selected) >= int(exon_range.split("-")[0])) and (int(region_selected) < int(exon_range.split("-")[1])):
                    print("found")
                    print(region_selected)
@@ -701,39 +1088,72 @@ if __name__ == "__main__":
                        print(offset)
                        
                    signal_fade_out[offset:offset+40] = np.zeros(len(signal_fade_out[offset:offset+40]))
-                   
-        print(signal_fade_out)
+        """           
+
                    
 
                    
-        shape_file1 = args.target_folder + id_[1:-1] + "1.shape"
-        shape_file2 = args.target_folder + id_[1:-1] + "2.shape"
-        shape_file3 = args.target_folder + id_[1:-1] + "3.shape"
-        shape_file4 = args.target_folder + id_[1:-1] + "4.shape"
-        shape_file5 = args.target_folder + id_[1:-1] + "5.shape"
+        shape_file1 = args.target_folder + id_[1:-1] + "1.shape.fa"
+        shape_file2 = args.target_folder + id_[1:-1] + "2.shape.fa"
+        shape_file3 = args.target_folder + id_[1:-1] + "3.shape.fa"
+        shape_file4 = args.target_folder + id_[1:-1] + "4.shape.fa"
+        shape_file5 = args.target_folder + id_[1:-1] + "5.shape.fa"
         
         input_fasta = args.target_folder + id_[1:-1] + ".fasta"
         info_file = args.target_folder + id_[1:-1] + "/" + "complete_info.txt"
         
-        create_shape_file(id_, seq, dms, dms_prediction, cov, signal_fade_out, shape_file1, shape_file2, shape_file3, shape_file4, shape_file5, input_fasta)
+        
+        create_shape_file_constraint(id_, seq, dms_raw_signal, dms_prediction, cov, signal_fade_out, shape_file1, shape_file2, shape_file3, shape_file4, shape_file5, input_fasta)
+        
 
 
                            
                            
-        target_folder = args.target_folder + id_[1:-1] + "/"
+        target_folder = args.target_folder + id_[1:-1]   + "/"
         if os.path.isdir(target_folder) == False: os.mkdir(target_folder)
         info_file = open(info_file, "w")
-        info_file.write(str(" ".join([str(d) for d in dms])))
+        info_file.write(gene_name + " " + target + "\n")
+        info_file.write(str(" ".join([str(d) for d in dms_raw_signal])))
         info_file.write("\n")
-        info_file.write(str(" ".join([str(int(s)) for s in signal_fade_out])))
+
+        
+        print(signal_fade_out)
+        
+        info_file.write(str(" ".join([str(s) for s in signal_fade_out])))
+        info_file.write("\n")
+        info_file.write(str(" ".join([str(d.item()) for d in dms_prediction])))
         info_file.close()
         
+        eclip_info_file = open(args.target_folder + id_[1:-1] + "/" + "eclip_regions.txt", "w")
+        for e_reg in found_regions:
+            eclip_info_file.write(str(e_reg[0]))
+            eclip_info_file.write(str("\t"))
+            eclip_info_file.write(str(e_reg[1]))
+            eclip_info_file.write(str("\t"))
+            eclip_info_file.write(str(e_reg[2]))
+            eclip_info_file.write(str("\t"))
+            eclip_info_file.write(str(e_reg[3]))
+            eclip_info_file.write(str("\t"))
+            eclip_info_file.write(str(e_reg[4]))
+            eclip_info_file.write(str("\n"))
+        eclip_info_file.close()
+            
+        """
         RNAfold("RNAfold", input_fasta, shape_file=None, target_file = target_folder + "plain", id_ = id_[1:-1])
         RNAfold("RNAfold", input_fasta, shape_file1, target_file = target_folder + "dms", id_ = id_[1:-1])
         RNAfold("RNAfold", input_fasta, shape_file2, target_file = target_folder + "oops_double", id_ = id_[1:-1])
         RNAfold("RNAfold", input_fasta, shape_file3, target_file = target_folder + "oops_single", id_ = id_[1:-1])
         RNAfold("RNAfold", input_fasta, shape_file4, target_file = target_folder + "oops_double_dms", id_ = id_[1:-1])
         RNAfold("RNAfold", input_fasta, shape_file5, target_file = target_folder + "oops_single_dms", id_ = id_[1:-1])
+        """
+        
+        #RNAfold("RNAfold", input_fasta, shape_file=None, target_file = target_folder + "plain", id_ = id_[1:-1])
+        #RNAfold("RNAfold", shape_file1, shape_file=None, target_file = target_folder + "dms", id_ = id_[1:-1])
+        #RNAfold("RNAfold", shape_file2, shape_file=None, target_file = target_folder + "oops_single", id_ = id_[1:-1])
+        #RNAfold("RNAfold", shape_file3, shape_file=None, target_file = target_folder + "oops_double", id_ = id_[1:-1])
+        #RNAfold("RNAfold", shape_file4, shape_file=None, target_file = target_folder + "oops_single_dms", id_ = id_[1:-1])
+        #RNAfold("RNAfold", shape_file5, shape_file=None, target_file = target_folder + "oops_double_dms", id_ = id_[1:-1])
+        
         
         os.remove(shape_file1)
         os.remove(shape_file2)
@@ -747,91 +1167,154 @@ if __name__ == "__main__":
         ################################################################################
 
         seq_5utr = seq[:utr5_len+1]
-        dms_5utr = dms[:utr5_len+1]
+        dms_5utr = dms_raw_signal[:utr5_len+1]
         cov_5utr = cov[:utr5_len+1]
         dms_pred_5utr = dms_prediction[:utr5_len+1]
         signal_fade_out_5utr = signal_fade_out[:utr5_len+1]
+        
+        
+        eclip_info_file = open(args.target_folder + id_[1:-1] + "/" + "eclip_regions_5utr.txt", "w")
+        for e_reg in found_regions:
+            
+            if e_reg[-2] > utr5_len: continue
+        
+            eclip_info_file.write(str(e_reg[0]))
+            eclip_info_file.write(str("\t"))
+            eclip_info_file.write(str(e_reg[1]))
+            eclip_info_file.write(str("\t"))
+            eclip_info_file.write(str(e_reg[2]))
+            eclip_info_file.write(str("\t"))
+            eclip_info_file.write(str(e_reg[3]))
+            eclip_info_file.write(str("\t"))
+            eclip_info_file.write(str(e_reg[4]))
+            eclip_info_file.write(str("\n"))
+        eclip_info_file.close()
 
 
-        shape_file1 = args.target_folder_5utr + id_[1:-1] + "1.shape"
-        shape_file2 = args.target_folder_5utr + id_[1:-1] + "2.shape"
-        shape_file3 = args.target_folder_5utr + id_[1:-1] + "3.shape"
-        shape_file4 = args.target_folder_5utr + id_[1:-1] + "4.shape"
-        shape_file5 = args.target_folder_5utr + id_[1:-1] + "5.shape"
+        shape_file1 = args.target_folder_5utr + id_[1:-1] + "1.shape.fa"
+        shape_file2 = args.target_folder_5utr + id_[1:-1] + "2.shape.fa"
+        shape_file3 = args.target_folder_5utr + id_[1:-1] + "3.shape.fa"
+        shape_file4 = args.target_folder_5utr + id_[1:-1] + "4.shape.fa"
+        shape_file5 = args.target_folder_5utr + id_[1:-1] + "5.shape.fa"
 
         input_fasta = args.target_folder_5utr + id_[1:-1] + ".fasta"
         info_file = args.target_folder_5utr + id_[1:-1] + "/" + "complete_info_5utr.txt"
         
-        create_shape_file(id_, seq_5utr, dms_5utr, dms_pred_5utr, cov_5utr, signal_fade_out_5utr, shape_file1,
+        create_shape_file_constraint(id_, seq_5utr, dms_5utr, dms_pred_5utr, cov_5utr, signal_fade_out_5utr, shape_file1,
                            shape_file2, shape_file3, shape_file4, shape_file5, input_fasta)
 
         
         target_folder = args.target_folder_5utr + id_[1:-1] + "/"
         if os.path.isdir(target_folder) == False: os.mkdir(target_folder)
         info_file = open(info_file, "w")
+        info_file.write(gene_name + " " + target + "\n")
         info_file.write(str(" ".join([str(d) for d in dms_5utr])))
         info_file.write("\n")
-        info_file.write(str(" ".join([str(int(s)) for s in signal_fade_out_5utr])))
+        info_file.write(str(" ".join([str(s) for s in signal_fade_out_5utr])))
+        info_file.write("\n")
+        info_file.write(str(" ".join([str(d.item()) for d in dms_pred_5utr])))
         info_file.close()
-        
+        """
         RNAfold("RNAfold", input_fasta, shape_file=None, target_file = target_folder + "plain", id_ = id_[1:-1])
         RNAfold("RNAfold", input_fasta, shape_file1, target_file = target_folder + "dms", id_ = id_[1:-1])
         RNAfold("RNAfold", input_fasta, shape_file2, target_file = target_folder + "oops_double", id_ = id_[1:-1])
         RNAfold("RNAfold", input_fasta, shape_file3, target_file = target_folder + "oops_single", id_ = id_[1:-1])
         RNAfold("RNAfold", input_fasta, shape_file4, target_file = target_folder + "oops_double_dms", id_ = id_[1:-1])
         RNAfold("RNAfold", input_fasta, shape_file5, target_file = target_folder + "oops_single_dms", id_ = id_[1:-1])
+        """
 
-        os.remove(shape_file1)
-        os.remove(shape_file2)
-        os.remove(shape_file3)
-        os.remove(shape_file4)
-        os.remove(shape_file5)
 
-        os.remove(input_fasta)
+        RNAfold("RNAfold", input_fasta, shape_file=None, target_file = target_folder + "plain", id_ = id_[1:-1])
+        RNAfold("RNAfold", shape_file1, shape_file=None, target_file = target_folder + "dms", id_ = id_[1:-1])
+        RNAfold("RNAfold", shape_file2, shape_file=None, target_file = target_folder + "oops_single", id_ = id_[1:-1])
+        RNAfold("RNAfold", shape_file3, shape_file=None, target_file = target_folder + "oops_double", id_ = id_[1:-1])
+        RNAfold("RNAfold", shape_file4, shape_file=None, target_file = target_folder + "oops_single_dms", id_ = id_[1:-1])
+        RNAfold("RNAfold", shape_file5, shape_file=None, target_file = target_folder + "oops_double_dms", id_ = id_[1:-1])
+        
+        #raise NotImplementedError
+        #os.remove(shape_file1)
+        #os.remove(shape_file2)
+        #os.remove(shape_file3)
+        #os.remove(shape_file4)
+        #os.remove(shape_file5)
+
+        #os.remove(input_fasta)
 
 
 
         ################################################################################
         ############################# create 3 UTR data ###########################
         ################################################################################
+        
+
         print("utr3_len")
         print(utr3_len)
         print(len(seq))
 
         seq_3utr = seq[len(seq)-(utr3_len+1):]
-        dms_3utr = dms[len(seq)-(utr3_len+1):]
+        dms_3utr = dms_raw_signal[len(seq)-(utr3_len+1):]
         cov_3utr = cov[len(seq)-(utr3_len+1):]
         signal_fade_out_3utr = signal_fade_out[len(seq)-(utr3_len+1):]
         dms_pred_3utr = dms_prediction[len(seq)-(utr3_len+1):]
+        
+        eclip_info_file = open(args.target_folder + id_[1:-1] + "/" + "eclip_regions_3utr.txt", "w")
+        for e_reg in found_regions:
+            
+            if e_reg[-2] < len(seq)-(utr3_len+1): continue
+        
+            eclip_info_file.write(str(e_reg[0]))
+            eclip_info_file.write(str("\t"))
+            eclip_info_file.write(str(e_reg[1]))
+            eclip_info_file.write(str("\t"))
+            eclip_info_file.write(str(e_reg[2]))
+            eclip_info_file.write(str("\t"))
+            eclip_info_file.write(str(e_reg[3]))
+            eclip_info_file.write(str("\t"))
+            eclip_info_file.write(str(e_reg[4]))
+            eclip_info_file.write(str("\n"))
+        eclip_info_file.close()
+        
 
 
-        shape_file1 = args.target_folder_3utr + id_[1:-1] + "1.shape"
-        shape_file2 = args.target_folder_3utr + id_[1:-1] + "2.shape"
-        shape_file3 = args.target_folder_3utr + id_[1:-1] + "3.shape"
-        shape_file4 = args.target_folder_3utr + id_[1:-1] + "4.shape"
-        shape_file5 = args.target_folder_3utr + id_[1:-1] + "5.shape"
+        shape_file1 = args.target_folder_3utr + id_[1:-1] + "1.shape.fa"
+        shape_file2 = args.target_folder_3utr + id_[1:-1] + "2.shape.fa"
+        shape_file3 = args.target_folder_3utr + id_[1:-1] + "3.shape.fa"
+        shape_file4 = args.target_folder_3utr + id_[1:-1] + "4.shape.fa"
+        shape_file5 = args.target_folder_3utr + id_[1:-1] + "5.shape.fa"
         
         input_fasta = args.target_folder_3utr + id_[1:-1] + ".fasta"
         info_file = args.target_folder_3utr + id_[1:-1] + "/" + "complete_info_3utr.txt"
         
-        create_shape_file(id_, seq_3utr, dms_3utr, dms_pred_3utr, cov_3utr, signal_fade_out_3utr, shape_file1, 
+        create_shape_file_constraint(id_, seq_3utr, dms_3utr, dms_pred_3utr, cov_3utr, signal_fade_out_3utr, shape_file1, 
                           shape_file2, shape_file3, shape_file4, shape_file5, input_fasta)
 
         
         target_folder = args.target_folder_3utr + id_[1:-1] + "/"
         if os.path.isdir(target_folder) == False: os.mkdir(target_folder)
         info_file = open(info_file, "w")
+        info_file.write(gene_name + " " + target + "\n")
         info_file.write(str(" ".join([str(d) for d in dms_3utr])))
         info_file.write("\n")
-        info_file.write(str(" ".join([str(int(s)) for s in signal_fade_out_3utr])))
+        info_file.write(str(" ".join([str(s) for s in signal_fade_out_3utr])))
+        info_file.write("\n")
+        info_file.write(str(" ".join([str(d.item()) for d in dms_pred_3utr])))
         info_file.close()
         
+        """
         RNAfold("RNAfold", input_fasta, shape_file=None, target_file = target_folder + "plain", id_ = id_[1:-1])
         RNAfold("RNAfold", input_fasta, shape_file1, target_file = target_folder + "dms", id_ = id_[1:-1])
         RNAfold("RNAfold", input_fasta, shape_file2, target_file = target_folder + "oops_double", id_ = id_[1:-1])
         RNAfold("RNAfold", input_fasta, shape_file3, target_file = target_folder + "oops_single", id_ = id_[1:-1])
         RNAfold("RNAfold", input_fasta, shape_file4, target_file = target_folder + "oops_double_dms", id_ = id_[1:-1])
         RNAfold("RNAfold", input_fasta, shape_file5, target_file = target_folder + "oops_single_dms", id_ = id_[1:-1])
+        """
+        
+        RNAfold("RNAfold", input_fasta, shape_file=None, target_file = target_folder + "plain", id_ = id_[1:-1])
+        RNAfold("RNAfold", shape_file1, shape_file=None, target_file = target_folder + "dms", id_ = id_[1:-1])
+        RNAfold("RNAfold", shape_file2, shape_file=None, target_file = target_folder + "oops_single", id_ = id_[1:-1])
+        RNAfold("RNAfold", shape_file3, shape_file=None, target_file = target_folder + "oops_double", id_ = id_[1:-1])
+        RNAfold("RNAfold", shape_file4, shape_file=None, target_file = target_folder + "oops_single_dms", id_ = id_[1:-1])
+        RNAfold("RNAfold", shape_file5, shape_file=None, target_file = target_folder + "oops_double_dms", id_ = id_[1:-1])
 
         os.remove(shape_file1)
         os.remove(shape_file2)
@@ -841,8 +1324,12 @@ if __name__ == "__main__":
         os.remove(input_fasta)
 
 
+
         created.append(id_)
+        test_count = test_count + 1
         
+
+
 
 
 

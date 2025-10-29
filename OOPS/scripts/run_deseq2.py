@@ -30,7 +30,9 @@ def run_deseq2(output_folder, input_folder, input_meta_file, run_checks = False)
 
     for file_ in files:
      
-        #try:
+        #if "IGFL1" not in file_: continue
+        
+        try:
             print(file_)
             name = file_.split("/")[-1].split("_data.csv")[0]
 
@@ -84,8 +86,8 @@ def run_deseq2(output_folder, input_folder, input_meta_file, run_checks = False)
             stat_res.results_df.to_csv(OUTPUT_PATH + name +  "_stat_results.csv")
             deseq_list.append(file_ + "\n")
 
-        #except:
-        #    print("Exception")
+        except:
+            print("Exception")
     return deseq_list
 
 if __name__ == '__main__':

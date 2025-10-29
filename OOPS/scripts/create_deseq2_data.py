@@ -35,7 +35,157 @@ def initialize_lists(num_lists):
     hisat1.close()
         
     return dicts_, columns
-def create_counts(coverage_file, hisat1_counts, columns, set_columns = False, window_size = 40):
+    
+def create_counts(coverage_file, hisat1_counts, columns, set_columns=False, window_size=40):
+    junction_list_left = []
+    junction_list_right = []
+    junction_list_middle = []
+    end_last = False
+
+    hisat1 = open(coverage_file).readlines()
+    last_tid = None
+    skip = False
+    last_start = None
+
+    print("create counts")
+    print(len(hisat1))
+
+    for enum, line in enumerate(hisat1):
+        fields = line.strip().split("\t")
+        chr_ = fields[0]
+        start = int(fields[1])
+        end = int(fields[2])
+        count = float(fields[6])
+        tid = f"{fields[3].split('|')[0]}|{fields[3].split('|')[1]}"
+        tid1 = fields[3].split("|")[0]
+        junc = fields[3].split("|")[-1]
+        
+        #if tid != "XR_930928.3|SLC39A13": continue
+        
+        #print(tid)
+
+
+        current_length = end - start
+
+        if junc == "intra":
+            if junction_list_left or junction_list_right:
+                if not junction_list_left:
+                    for half in junction_list_right:
+                        junc_tid = half[3]
+                        if set_columns:
+                            #print(str(half[1] + half[0]))
+                            if half[1] + half[0] < half[1]: raise NotImplementedError
+                            if "." in str(half[1] + half[0]): raise NotImplementedError
+                            columns[junc_tid].append(str(half[1]) + "-" + str(half[1] + half[0]))
+                        hisat1_counts[junc_tid].append(half[2])
+                elif not junction_list_right:
+                    for half in junction_list_left:
+                        junc_tid = half[3]
+                        if set_columns:
+                        
+                            #print(str(half[1] + half[0]))
+                            if half[1] + half[0] < half[1]: raise NotImplementedError
+                            if "." in str(half[1] + half[0]): raise NotImplementedError
+                            columns[junc_tid].append(str(half[1]) + "-" + str(half[1] + half[0]))
+                        hisat1_counts[junc_tid].append(half[2])
+                else:
+                    for half in junction_list_right:
+                        junc_tid = half[3]
+
+                        middle_window = [w for w in junction_list_middle if w[-2] == half[-1] and w[-3] == half[-2] + 1 and half[3] == w[3]] if junction_list_middle else []
+                        left_window = [w for w in junction_list_left if w[-1] == half[-1] and w[-2] == half[-2] + 1 and half[3] == w[3]] if not middle_window else \
+                                      [w for w in junction_list_left if w[-1] == middle_window[0][-1] and w[-2] == middle_window[0][-3] + 1 and w[3] == middle_window[0][3]]
+
+                        if not left_window:
+                            if set_columns:
+                            
+                                #print(str(half[1] + half[0]))
+                                if half[1] + half[0] < half[1]: raise NotImplementedError
+                                if "." in str(half[1] + half[0]): raise NotImplementedError
+                                columns[junc_tid].append((str(half[1]) + "-" + str(half[1] + half[0])))
+                            hisat1_counts[junc_tid].append(half[0])
+                            continue
+
+                        combined_coverage = half[2] * half[0]/window_size + left_window[0][2] * left_window[0][0]/window_size
+                        if middle_window:
+                            combined_coverage += middle_window[0][2] * middle_window[0][0]/window_size
+
+                        if set_columns:
+                            #start_pos = left_window[0][1]
+                            #end_pos = half[1] + half[0]
+                            
+                            start_pos = half[1]
+                            end_pos = left_window[0][1] + left_window[0][0]
+                            #print("here")
+                            #print(half)
+                            #print(left_window)
+                            #print(str(end_pos))
+                            #print(start_pos)
+                            #print(half[3])
+                            if int(end_pos) < int(start_pos): raise NotImplementedError
+                            if "." in str(end_pos): raise NotImplementedError
+                            columns[half[3]].append(str(start_pos)  + "-"  + str(end_pos))
+
+                        hisat1_counts[half[3]].append(combined_coverage)
+
+                        if middle_window:
+                            assert half[0] + left_window[0][0] + middle_window[0][0] == window_size
+                        else:
+                            assert half[0] + left_window[0][0] == window_size
+
+                        junction_list_left.remove(left_window[0])
+                        if middle_window:
+                            junction_list_middle.remove(middle_window[0])
+
+            last_tid = tid
+            if set_columns:
+                #print(str(end))
+                if int(end) < int(start): raise NotImplementedError
+                if "." in str(end): raise NotImplementedError
+                columns[tid].append(str(start) + "-" + str(end))
+            hisat1_counts[tid].append(count)
+            junction_list_left = []
+            junction_list_right = []
+            junction_list_middle = []
+
+        else:
+            if last_start is None:
+                last_start = start
+
+            if "left" in junc:
+                junc_id = int(junc.split("_")[-1])
+                exon_id = int(junc.split("_")[2])
+                junction_list_left.append([current_length, start, count, tid, exon_id, junc_id])
+            elif "right" in junc:
+                junc_id = int(junc.split("_")[-1])
+                exon_id = int(junc.split("_")[2])
+                junction_list_right.append([current_length, start, count, tid, exon_id, junc_id])
+            elif "middle" in junc:
+                junc_id_right = int(junc.split("_")[-1])
+                junc_id_left = int(junc.split("_")[-2])
+                exon_id = int(junc.split("_")[2])
+                junction_list_middle.append([current_length, start, count, tid, exon_id, junc_id_left, junc_id_right])
+
+            last_tid = tid
+            last_start = start
+    #if tid == "XR_930928.3|SLC39A13": raise NotImplementedError
+    # Final flush
+    if junction_list_right:
+        for half in junction_list_right:
+            junc_tid = half[3]
+            if set_columns:
+                #print(str(half[1] + half[0]))
+                if half[1] + half[0] < half[1]: raise NotImplementedError
+                
+                if "." in str(half[1] + half[0]): raise NotImplementedError
+                columns[junc_tid].append(str(half[1]) + "-" + str(half[1] + half[0]))
+            hisat1_counts[junc_tid].append(half[2])
+
+
+    return hisat1_counts, columns
+     
+    
+def create_counts_old2(coverage_file, hisat1_counts, columns, set_columns = False, window_size = 40):
 
     junction_list_left = []
     junction_list_right = []
@@ -61,20 +211,7 @@ def create_counts(coverage_file, hisat1_counts, columns, set_columns = False, wi
         tid = str(line.split("\t")[3].split("|")[0] + "|" + line.split("\t")[3].split("|")[1])
         tid1 = str(line.split("\t")[3].split("|")[0])
 
-        #if  "XM_047439107.1|SPHK2" == tid: raise NotImplementedError
-        #if tid == "NM_001305275.2|AGRN": continue
-        #if tid == "XM_024446454.2|ARHGEF16": continue
-        #if tid == "XM_024446455.2|ARHGEF16": continue
-        #if  "XM_047439107.1|SPHK2" != tid:continue
-        #if enum > 10000: continue
-        # NM_001401365.1|TTC7B
-        #if  "XM_047439107.1|SPHK2" == tid:end_last = True
-        #print(line)
-        #if end_last == True and tid != "XM_047439107.1|SPHK2": raise NotImplementedError
-        #print("junction_list_right")
-        #print(junction_list_right)
-        #print("junction_list_left")
-        #print(junction_list_left)
+
         junc = line.split("\t")[3].split("|")[-1]
         
         if junc == "intra":
@@ -230,7 +367,17 @@ def create_counts(coverage_file, hisat1_counts, columns, set_columns = False, wi
         #if  "XM_047439107.1|SPHK2" == tid:print(last_tid_save)
         #if  "XM_047439107.1|SPHK2" == tid:raise NotImplementedError
         # NM_000979.4|RPL18
+        #        [34, 12193, 0.0, 'NR_046018.2|DDX11L1', 0, 0]
+        #[[6, 12612, 0.0, 'NR_046018.2|DDX11L1', 1, 0]]
         
+        """
+        chr1	12193	12227	NR_046018.2|DDX11L1|junction_right_0_0	0	+	0.0000000
+        chr1	12213	12227	NR_046018.2|DDX11L1|junction_right_0_1	0	+	0.0000000
+        chr1	12612	12618	NR_046018.2|DDX11L1|junction_left_1_0	0	+	0.0000000
+        chr1	12612	12638	NR_046018.2|DDX11L1|junction_left_1_1	0	+	0.0000000
+
+        """
+
         
     if junction_list_right != []:
                 

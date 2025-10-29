@@ -1,5 +1,4 @@
 #!python
-
 #!/usr/bin/env python3
 import os
 import math
@@ -11,28 +10,10 @@ SAMPLES = config["samples"].split(",")
 NC_FILES = config["nc"].split(",")
 CL_FILES = config["cl"].split(",")
 
-
-RAW_DIR = "raw/"
-TRIMMED_DIR = "trimmed/"
 MAPPED_DIR = "../Preprocessing/mapped/"
-STAR_INDEX = "star_index/SA"
-STAR_FOLDER = "star_index"
-GENOME_FASTA = "../Preprocessing/reference/genome.fa"
-
-
-GENOME_FASTA_URL = "https://ftp.ensembl.org/pub/current_fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz"
-GENOME_FASTA_GZ = "reference/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz"
-
-
-COVERAGE_DIR = "coverage/"
 SEQUENCE_DIR = "sequences/"
 GFF_Path = "refseq_with_start_codon"
 GENOME = 'hg38'
-DMS_PROFILES = "profiles/"
-SVG_PROFILES = "svgs/"
-BIT_Data = "hg38.2bit"
-FUNCTION_FILE = "in_fun.txt"
-
 EXON_WINDOW_FILE ="files/exon_windows_with_junctions.bed"
 EXON_FILE = "files/exons.bed"
 FILE_FOLDER = "files/"
@@ -40,30 +21,14 @@ refseq_file = "files/refseq_with_start_codon"
 COVERAGE = "coverage/"
 DESEQ_DATA = "deseq_data/"
 DESEQ_OUTPUT = "deseq_output/"
-TRACK_FOLDER = "tracks/"
-print(SAMPLES)
-# bedtools coverage -mean -a "files/exon_windows_with_junctions.bed" -b "../Preprocessing/mapped/OOPS-IL-1.filtered.bam" > coverage/OOPS-IL-1.windows.txt
+
+
 rule all:
     input:
-        #EXON_WINDOW_FILE,
-        #expand(f"{COVERAGE}{{sample}}.windows.txt", sample=SAMPLES),
-        #f"{DESEQ_DATA}_data_meta.csv",
-        #"deseq_summary.txt",
-        f"{TRACK_FOLDER}tracks_output.bed",
-        
-        
-"""
-XDG_CACHE_HOME=/mnt/tmp CONDA_PKGS_DIRS=/mnt/tmp/conda_pkgs TMPDIR=/mnt/tmp snakemake --use-conda --config samples=400-1-1.hisat_mine,400-1-2.hisat_mine,400-1-3.hisat_mine,NC-1-1.hisat_mine,NC-1-2.hisat_mine,NC-1-3.hisat_mine nc=NC-1-1.hisat_mine,NC-1-2.hisat_mine,NC-1-3.hisat_mine cl=400-1-1.hisat_mine,400-1-2.hisat_mine,400-1-3.hisat_mine --cores 1
-
-400-1-1.hisat_mine.windows.txt  NC-1-1.hisat_mine.windows.txt
-400-1-2.hisat_mine.windows.txt  NC-1-2.hisat_mine.windows.txt
-400-1-3.hisat_mine.windows.txt  NC-1-3.hisat_mine.windows.txt
-400-1-4.hisat_mine.windows.txt  NC-1-4.hisat_mine.windows.txt
-
-
-XDG_CACHE_HOME=/mnt/tmp CONDA_PKGS_DIRS=/mnt/tmp/conda_pkgs TMPDIR=/mnt/tmp snakemake --use-conda --config samples=OOPS-IL-1,OOPS-IL-2,OOPS-IL-3,RNA-IL-1,RNA-IL-2,RNA-IL-3 nc=RNA-IL-1,RNA-IL-2,RNA-IL-3 cl=OOPS-IL-1,OOPS-IL-2,OOPS-IL-3 --cores 1
-
-XDG_CACHE_HOME=/mnt/tmp CONDA_PKGS_DIRS=/mnt/tmp/conda_pkgs TMPDIR=/mnt/tmp snakemake --use-conda --config samples=OOPS-NOIL-1,OOPS-NOIL-2,OOPS-NOIL-3,RNA-NOIL-1,RNA-NOIL-2,RNA-NOIL-3 nc=RNA-NOIL-1,RNA-NOIL-2,RNA-NOIL-3 cl=OOPS-NOIL-1,OOPS-NOIL-2,OOPS-NOIL-3 --cores 1
+        EXON_WINDOW_FILE,
+        expand(f"{COVERAGE}{{sample}}.windows.txt", sample=SAMPLES),
+        f"{DESEQ_DATA}_data_meta.csv",
+        "deseq_summary.txt",
 
 
 rule extract_bed:
@@ -75,11 +40,11 @@ rule extract_bed:
     conda:
         "envs/pysam.yaml"
     shell:
-
+        """
         mkdir -p {FILE_FOLDER}
         python scripts/extract_bed.py --input_file {input} --output_file {output.output2} --output_window_file {output.output1}
-
-
+        """
+    
 rule bedtools_coverage:
     input:
         input1 = lambda wildcards: f"{MAPPED_DIR}{wildcards.sample}.filtered.bam",
@@ -89,15 +54,10 @@ rule bedtools_coverage:
     conda:
         "envs/bedtools.yaml"
     shell:
-
+        """
         mkdir -p {COVERAGE}
         bedtools coverage -mean -a {input.input2} -b {input.input1} > {output}
-
-
-print(CL_FILES)
-#CL_FILES = [c + ".windows.txt" for c in CL_FILES]
-#NC_FILES = [c + ".windows.txt" for c in NC_FILES]
-print(NC_FILES)
+        """
 
 rule create_deseq2_data:
     input:
@@ -110,7 +70,7 @@ rule create_deseq2_data:
         cl_files = ",".join(input.input1)
         nc_files = ",".join(input.input2)
         
-        shell(f
+        shell(f"""
             mkdir -p {DESEQ_DATA}
             python scripts/create_deseq2_data.py \
                 --crosslinked_files {cl_files} \
@@ -118,11 +78,9 @@ rule create_deseq2_data:
                 --meta_data_file {output.meta_output} \
                 --data_folder {DESEQ_DATA}
             
-        )
+        """)
 
-
-
-rule run_deseq2:
+rule run_deseq2_full:
     input:
         meta_input = f"{DESEQ_DATA}_data_meta.csv",
     output:
@@ -133,37 +91,7 @@ rule run_deseq2:
         data = DESEQ_DATA,
         output = DESEQ_OUTPUT
     shell:
-
+        """
         mkdir -p {DESEQ_OUTPUT}
         python scripts/run_deseq2.py --input_meta_file {input.meta_input} --input_folder {params.data} --output_folder {params.output} --deseq_summary {output.summary}
-
-
-"""
-TRACK_FOLDER = "tracks/"
-
-rule create_track_files:
-    input:
-        meta_input = f"deseq_summary.txt",
-    output:
-        track_output = f"{TRACK_FOLDER}tracks_output.bed",
-        track_output_p = f"{TRACK_FOLDER}tracks_output_p.bed",
-        track_output_2 = f"{TRACK_FOLDER}tracks_output_p2.bed",
-        track_output_n = f"{TRACK_FOLDER}track_output_n.bed",
-        positive_tracks = f"{TRACK_FOLDER}positive_tracks.bed",
-        track_output2 =  f"{TRACK_FOLDER}tracks_output2.bed",
-        file_trackb2 =  f"{TRACK_FOLDER}file_trackb2.bed",
-        file_track2_full =  f"{TRACK_FOLDER}file_track2_full.bed",
-        file_track_fp2 =  f"{TRACK_FOLDER}file_track_fp2.bed",
-        track_table = f"{TRACK_FOLDER}track_table.csv",
-        track_table_p = f"{TRACK_FOLDER}track_table_p.csv",
-        track_table_p_z = f"{TRACK_FOLDER}track_table_p_z.csv",
-        track_table_p_gm = f"{TRACK_FOLDER}track_table_p_gm.csv",
-    conda:
-        "envs/pysam.yaml"
-    shell:
         """
-        mkdir -p {TRACK_FOLDER}
-        python scripts/analyse_lf2.py --deseq_output {DESEQ_OUTPUT} --track_output {output.track_output} --track_output_p {output.track_output_p} --track_output_p2 {output.track_output_2} --track_output_n {output.track_output_n} --positive_tracks {output.positive_tracks} --track_table {output.track_table} --track_table_p {output.track_table_p} --track_table_p_z_score {output.track_table_p_z} --track_table_p_gm {output.track_table_p_gm} --refseq_file {refseq_file} --exons {EXON_FILE} --track_output2 {output.track_output2} --file_trackb2 {output.file_trackb2} --file_track2_full {output.file_track2_full} --file_track_fp2 {output.file_track_fp2}
-        """
-        
-

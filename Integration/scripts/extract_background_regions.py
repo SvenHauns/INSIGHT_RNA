@@ -242,7 +242,7 @@ if __name__ == "__main__":
             lf = oops_data['log2FoldChange']
             padj_val = oops_data['padj']
             
-            if np.mean(mean) < 1000: continue
+            #if np.mean(mean) < 1000: continue
             
             selected_region = [r for enum, r in enumerate(regions) if mean[enum] >= 50 and padj_val[enum] > 0.05]
             exons = sorted(exon_dict[line_[1:-1]], key=lambda l:int(l.split("-")[0]))

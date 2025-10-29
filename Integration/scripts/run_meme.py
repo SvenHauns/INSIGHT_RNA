@@ -10,17 +10,26 @@ import argparse
 
 def run_meme(input_sequences, input_background_file, output_html):
 
+    lines = open(input_sequences).readlines()
 
-	cmd = "meme {targets} -dna -oc {meme_out} -neg {background} -nmotifs 15 -minw 6 -maxw 15 -revcomp -objfun de"
-	cmd = cmd.format(targets=input_sequences, background=input_background_file, meme_out = output_html)
+
+    file_ = open(input_sequences, "w")
+
+    for line_ in lines:
+        file_.write(line_.replace("T", "U"))
+
+
+
+    cmd = "meme {targets} -rna -oc {meme_out} -neg {background} -nmotifs 20 -minw 6 -maxw 15 -objfun de"
+    cmd = cmd.format(targets=input_sequences, background=input_background_file, meme_out = output_html)
 	
-	log_file = "meme.log"
-	print(cmd)
-	with open(log_file, 'w') as lf:
-		sp.call(cmd.split(), stdout=lf)
+    log_file = "meme.log"
+    print(cmd)
+    with open(log_file, 'w') as lf:
+        sp.call(cmd.split(), stdout=lf)
         
     
-	return
+    return
     
     
 

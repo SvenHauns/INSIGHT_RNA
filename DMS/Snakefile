@@ -1,25 +1,13 @@
 #!python
-
 #!/usr/bin/env python3
 import os
 import math
 
 SAMPLES = set()
 sample_dict = {}
-
 SAMPLES = config["samples"].split(",")
-RAW_DIR = "raw/"
-TRIMMED_DIR = "trimmed/"
+
 MAPPED_DIR = "../Preprocessing/mapped/"
-STAR_INDEX = "star_index/SA"
-STAR_FOLDER = "star_index"
-GENOME_FASTA = "../Preprocessing/reference/genome.fa"
-
-
-GENOME_FASTA_URL = "https://ftp.ensembl.org/pub/current_fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz"
-GENOME_FASTA_GZ = "reference/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz"
-
-
 COVERAGE_DIR = "coverage/"
 SEQUENCE_DIR = "sequences/"
 GFF_Path = "refseq_with_start_codon"
@@ -27,11 +15,9 @@ GENOME = 'hg38'
 DMS_PROFILES = "profiles/"
 SVG_PROFILES = "svgs/"
 BIT_Data = "hg38.2bit"
-FUNCTION_FILE = "tools/in_fun.txt"
-TEXT_FILE = "tools/Ubuntu-Regular.ttf"
+FUNCTION_FILE = "in_fun.txt"
 
-
-print(SAMPLES)
+RUN = "3UTR"
 
 rule all:
     input:
@@ -40,8 +26,7 @@ rule all:
         expand(f"{COVERAGE_DIR}{{sample}}.filtered_all.bed", sample=SAMPLES),
         expand(f"{COVERAGE_DIR}{{sample}}.filtered_all_fixed.bed", sample=SAMPLES),
         expand(f"{SEQUENCE_DIR}{{sample}}.filtered_all_sequences.bed", sample=SAMPLES),
-        expand(f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_all.txt", sample=SAMPLES)
-        
+        expand(f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_90_20.txt", sample=SAMPLES),
 
 
 rule get_target_regions:
@@ -57,7 +42,7 @@ rule get_target_regions:
     shell:
         """
         mkdir -p {COVERAGE_DIR}
-        python scripts/get_candidates.py --gff_path {GFF_Path} --bamfile {input} --target_folder {COVERAGE_DIR}
+        python scripts/get_candidates.py --gff_path {GFF_Path} --bamfile {input} --target_folder {COVERAGE_DIR} --run_type {RUN}
         """
         
 rule convert_to_list:
@@ -175,21 +160,39 @@ rule extract_dms_profiles:
         output1 = f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_99_20.txt",
         output2 = f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_95_20.txt",
         output3 = f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_90_20.txt",
-        output4 = f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_all.txt",
+        
+        output3_stable_dict = f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_90_20_stable_dict.pkl",
+        output3_changed_dict = f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_90_20_changed_dict.pkl",
+
+        output1_stable_dict = f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_99_20_stable_dict.pkl",
+        output1_changed_dict = f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_99_20_changed_dict.pkl",
+
+        output2_stable_dict = f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_95_20_stable_dict.pkl",
+        output2_changed_dict = f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_95_20_changed_dict.pkl",
+
+
     conda:
         "envs/pysam.yaml"
     params:
-        output_dict = lambda wildcards:  f"{DMS_PROFILES}{{sample}}/{SVG_PROFILES}"
+        output_dict = lambda wildcards:  f"{DMS_PROFILES}{wildcards.sample}/{SVG_PROFILES}"
     shell:
         """
         mkdir -p {DMS_PROFILES}
         mkdir -p {DMS_PROFILES}{{sample}}/{SVG_PROFILES}
-        python scripts/create_profile.py --coverage_list {input.input1_coverage_list} --extracted_sequences {input.input1_seq} --fixed_bed_file {input.input1_fixed_bed} --bam_file {input.input_bam} --save_path {params.output_dict} --output_file {output.output1}
-        python scripts/create_profile.py --coverage_list {input.input2_coverage_list} --extracted_sequences {input.input2_seq} --fixed_bed_file {input.input2_fixed_bed} --bam_file {input.input_bam} --save_path {params.output_dict} --output_file {output.output2}
-        python scripts/create_profile.py --coverage_list {input.input3_coverage_list} --extracted_sequences {input.input3_seq} --fixed_bed_file {input.input3_fixed_bed} --bam_file {input.input_bam} --save_path {params.output_dict} --output_file {output.output3}
-        python scripts/create_profile.py --coverage_list {input.input4_coverage_list} --extracted_sequences {input.input4_seq} --fixed_bed_file {input.input4_fixed_bed} --bam_file {input.input_bam} --save_path {params.output_dict} --output_file {output.output4}
+        
+        
+        python scripts/create_profile.py --coverage_list {input.input3_coverage_list} --extracted_sequences {input.input3_seq} \\
+        --fixed_bed_file {input.input3_fixed_bed} --bam_file {input.input_bam} --save_path {params.output_dict} --output_file {output.output3} \\
+        --stable_dict {output.output3_stable_dict} --changed_dict {output.output3_changed_dict}
+        python scripts/create_profile.py --coverage_list {input.input1_coverage_list} --extracted_sequences {input.input1_seq} \\
+        --fixed_bed_file {input.input1_fixed_bed} --bam_file {input.input_bam} --save_path {params.output_dict} --output_file {output.output1} \\
+        --stable_dict {output.output1_stable_dict} --changed_dict {output.output1_changed_dict}
+        python scripts/create_profile.py --coverage_list {input.input2_coverage_list} --extracted_sequences {input.input2_seq} \\
+        --fixed_bed_file {input.input2_fixed_bed} --bam_file {input.input_bam} --save_path {params.output_dict} --output_file {output.output2} \\
+        --stable_dict {output.output2_stable_dict} --changed_dict {output.output2_changed_dict}
         """
-
+        
+        
 rule retrieve_rna_structure:
     input:             
         input1 =  lambda wildcards: f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_99_20.txt",
@@ -202,15 +205,14 @@ rule retrieve_rna_structure:
         output3 = f"{DMS_PROFILES}{{sample}}.filtered_90_20_summary.txt",
         output4 = f"{DMS_PROFILES}{{sample}}.filtered_all_summary.txt"
     conda:
-        "envs/rnafold.yaml"
+        "envs/pysam.yaml"
     shell:
         """
         mkdir -p {COVERAGE_DIR}
-        python scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input1} --structure_folder {} --summary {output.output1} --type {TEXT_FILE}
-        python scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input2} --structure_folder {} --summary {output.output2} --type {TEXT_FILE}
-        python scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input3} --structure_folder {} --summary {output.output3} --type {TEXT_FILE}
-        python scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input4} --structure_folder {} --summary {output.output4} --type {TEXT_FILE}
+        python scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input1} --structure_folder {} --summary {output.output1}
+        python scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input2} --structure_folder {} --summary {output.output2}
+        python scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input3} --structure_folder {} --summary {output.output13}
+        python scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input4} --structure_folder {} --summary {output.output4}
         """
         
 
-                                

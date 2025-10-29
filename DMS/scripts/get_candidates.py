@@ -721,20 +721,14 @@ def etract_refseq_utr(gff_path, run_type = "full"):
             
     hg_file.close()
     
-    transcript_list2 = ["NM_198541.2"]
-    exon_dict2 = {"NM_198541.2":exon_dict["NM_198541.2"]}
-    start_dict2 = {"NM_198541.2":start_dict["NM_198541.2"]}
-    strand_dict2 = {"NM_198541.2":strand_dict["NM_198541.2"]}
+    #transcript_list2 = ["NM_198541.2"]
+    #exon_dict2 = {"NM_198541.2":exon_dict["NM_198541.2"]}
+    #start_dict2 = {"NM_198541.2":start_dict["NM_198541.2"]}
+    #strand_dict2 = {"NM_198541.2":strand_dict["NM_198541.2"]}
     
-    print(transcript_list2)
-    print(exon_dict2)
-    print(start_dict2)
-    
-    transcript_lists = transcript_list2
-    exon_dict = exon_dict2
-    start_dict = start_dict2
-    strand_dict = strand_dict2
-    
+
+
+
 
     #utr_regions = extract_utr_region(transcript_lists, exon_dict, start_dict, strand_dict)
     if run_type == "full": utr_regions = extract_full_exon(transcript_lists, exon_dict, start_dict, strand_dict)
@@ -798,23 +792,25 @@ def extract_3utr_region(transcript_lists, exon_dict, start_dict, strand_dict):
         exon_dict_list = []
 
         if strand == "+":
-
+            offset = 100
             for exon in exon_dict[key]:
-                if exon[1] > start_dict[key][1]:
+                if exon[1] > start_dict[key][1] -offset:
             
                     exon_dict_list.append(exon)
                 
-                    if exon[0] <= start_dict[key][0]:
+                    if exon[0] <= start_dict[key][0] -offset:
 
-                        exon[0] = start_dict[key][1] + 1 
+                        exon[0] = start_dict[key][1] + 1 -offset 
                         
         elif strand == "-":
+        
+            offset = 100
             for exon in exon_dict[key]:
             
-                if exon[0] < start_dict[key][0]:
+                if exon[0] < start_dict[key][0] + offset:
                 
-                    if exon[1] >= start_dict[key][1]:
-                        exon[1] = start_dict[key][0] - 1 
+                    if exon[1] >= start_dict[key][1] + offset:
+                        exon[1] = start_dict[key][0] - 1 + offset 
                    
                     exon_dict_list.append(exon)
                 
@@ -844,7 +840,7 @@ def extract_utr_region(transcript_lists, exon_dict, start_dict, strand_dict):
         if strand == "+":
         
         
-            offset = 0
+            offset = 100
             extra_nuc = 0
 
             for exon in exon_dict[key]:
@@ -862,7 +858,7 @@ def extract_utr_region(transcript_lists, exon_dict, start_dict, strand_dict):
         
         elif strand == "-":
         
-            offset = 0
+            offset = 100
             extra_nuc = 0
             
         
@@ -887,6 +883,8 @@ def extract_utr_region(transcript_lists, exon_dict, start_dict, strand_dict):
     print("return")
     print(utrs)
     print("end")
+    
+    
     return utrs
 
 

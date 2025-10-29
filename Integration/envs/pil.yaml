@@ -1,0 +1,14 @@
+name: pysam
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - pillow 
+  - reportlab
+  - pypdf
+  - matplotlib
+  - opencv
+  - cairosvg
+  - reportlab
+  - svglib

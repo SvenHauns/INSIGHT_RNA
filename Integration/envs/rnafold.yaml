@@ -3,8 +3,12 @@ channels:
   - conda-forge
   - bioconda
   - defaults
+  - pytorch
 dependencies:
   - viennarna
   - matplotlib
   - numpy
   - pandas
+  - pytorch
+  - einops
+  - pyyaml

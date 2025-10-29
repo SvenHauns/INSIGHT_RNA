@@ -1337,7 +1337,7 @@ if __name__ == '__main__':
                 print(stat_stable_dict)
                 print(stat_changed_dict)
                 
-            create_fig(sequence, normd_windows_for_bam, coverage_bam_list,  name_, strand_sub[en][0], args.save_path)
+            #create_fig(sequence, normd_windows_for_bam, coverage_bam_list,  name_, strand_sub[en][0], args.save_path)
             
 
     with open(args.stable_dict, 'wb') as fp:
