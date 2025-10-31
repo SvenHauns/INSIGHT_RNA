@@ -1,86 +1,33 @@
-import pysam
-import inspect
-mismatch_count = 0
 import argparse
-
-
-import pandas as pd
-import collections
 import pickle
 import numpy as np
-
-
-
+import pickle
+from pathlib import Path
 
 def main_func(input_string, input_folder):
 
-
-
-    with open(input_string, 'rb') as f:
+    with open(input_string, "rb") as f:
         loaded_dict = pickle.load(f)
 
+    out_path = Path(input_folder) / (Path(input_string).stem + ".bed")
 
-
-
-
-    file_ = open(input_folder + "/" + input_string.split("/")[-1].split(".pkl")[0] + ".bed", "w")   
     last_sub = None
-        
-           
-    
-    trancript_id_list = []
-    
-    for key_enum, key in enumerate(list(loaded_dict.keys())):
+    with open(out_path, "w") as fout:
+        for key in loaded_dict: 
+            for sub in loaded_dict[key]:
 
-        key_list = loaded_dict[key]
-        
-        for sublist in key_list:
-            trancript_id_list.append(sublist[2])
-        
-        
+                chrom = str(sub[0][0])
+                starts = sub[0][1][0]
+                ends   = sub[0][1][1]
+                strand = sub[4]
 
+                total_len = sum(abs(int(s) - int(e)) for s, e in zip(starts, ends))
 
-
-
-    for key_enum, key in enumerate(list(loaded_dict.keys())):
-
-        key_list = loaded_dict[key]
-        
-        for sublist in key_list:
-        
-            t_id = sublist[2]
-            t_id_index = trancript_id_list.index(t_id)
-            
-
-            length = [abs(int(start) - int(sublist[0][1][1][enum])) for enum, start in enumerate(sublist[0][1][0])]
-            
-
-
-
-            if sum(length) > 30 and sublist[0] != last_sub:
-
-                last_sub = sublist[0]
-
-                for enum, start in enumerate(sublist[0][1][0]):
-                    file_.write(str(sublist[0][0]))
-                    file_.write("\t")
-                    file_.write(str(start))                
-                    file_.write("\t")
-                    file_.write(str(sublist[0][1][1][enum]))
-                    file_.write("\t")
-                    file_.write("NaN")
-                    file_.write("\t")
-                    file_.write("0")
-                    file_.write("\t")
-                    file_.write(sublist[4])
-                    file_.write("\n")
-                    
-                    
-    file_.close()
-
-        
-
-             
+                if total_len > 30 and sub[0] != last_sub:
+                    last_sub = sub[0]
+                    for s, e in zip(starts, ends):
+                        fout.write("\t".join([chrom, str(s), str(e), "NaN", "0", strand]) + "\n")
+                     
 if __name__ == '__main__':
 
     cmdline_parser = argparse.ArgumentParser('coverage check')
@@ -98,8 +45,4 @@ if __name__ == '__main__':
                                 
     args, unknowns = cmdline_parser.parse_known_args()   
     main_func(args.input, args.folder)
-
-
-    
-    
     
