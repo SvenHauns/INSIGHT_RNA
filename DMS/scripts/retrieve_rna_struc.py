@@ -5,14 +5,13 @@ import os
 from PIL import Image
 from PIL import ImageFont
 from PIL import ImageDraw
-
-#CCT2-NM_006431
+import pickle
+from pathlib import Path
 
 def get_DMS_values(file_name, clamp_value = 0.2):
     
     file_ = open(file_name)
     file_lines = file_.readlines()
-    
     value_list = file_lines[1].split(" ")[:-1]
     value_list = [str(min(float(v),clamp_value)) + "\n" for v in value_list]
 
@@ -21,57 +20,44 @@ def get_DMS_values(file_name, clamp_value = 0.2):
 
 def color_ps_file(file_name, dms_vaues_path, function_file):
 
-    file2_ = open(function_file)
-    lines = file2_.readlines()
-    file2_.close()
-    replace_int = None
-    
+    with open(function_file) as f:
+        func_lines = f.readlines()
 
-    for enum,line in enumerate(lines):
+    try:
+        replace_idx = next(i for i, ln in enumerate(func_lines) if ln == "REPLACE_ME_WITH_VALUES\n")
+    except StopIteration:
+        raise ValueError("Placeholder line 'REPLACE_ME_WITH_VALUES' not found in function_file.")
 
-        if str(line) == "REPLACE_ME_WITH_VALUES\n":
-            replace_int = enum
-            
-            
     values = get_DMS_values(dms_vaues_path)
-    print(values)
-    
-    lines[replace_int:replace_int+1] = values
-    
-    
-    file_ = open(file_name)
-    lines_read = file_.readlines()
-    at_line = None
-    draw_line = None
-    
-    for enum, line in enumerate(lines_read):
-    
-        if str(line) == "% switch off outline pairs or bases by removing these lines\n":
-            at_line = enum
-            print(at_line)
-        if str(line) == "drawoutline\n":
-            draw_line = enum
-            
-    file_.close()
+    func_lines[replace_idx:replace_idx + 1] = values
+
+    with open(file_name) as f:
+        ps_lines = f.readlines()
+
+    try:
+        at_idx = next(i for i, ln in enumerate(ps_lines)
+                      if ln == "% switch off outline pairs or bases by removing these lines\n")
+    except StopIteration:
+        raise ValueError("Line for insertion not found in PS file.")
+
+    try:
+        draw_idx = next(i for i, ln in enumerate(ps_lines) if ln == "drawoutline\n")
+    except StopIteration:
+        raise ValueError("'drawoutline' line not found in PS file.")
+
+    ps_lines[at_idx:at_idx] = func_lines
+    draw_insert_at = draw_idx + len(func_lines)
+
     draw_list = ["/invert false def\n", "drawreliability\n", "0.1 0.1 colorbar\n"]
-    lines_read[at_line:at_line] = lines
-    lines_read[draw_line + len(lines):draw_line + len(lines)] = draw_list
-    
-    file_ = open(file_name, "w")
-    for line in lines_read:
-        file_.write(line)
-        
-    file_.close()
-    
+    ps_lines[draw_insert_at:draw_insert_at] = draw_list
+
+    with open(file_name, "w") as f:
+        f.writelines(ps_lines)
 
     return
 
 
-
-
 def RNAfold(prodigal_cmd, fasta_file, constraint):
-
-
     
     fasta_file_preffix = fasta_file.rsplit('.', 1)[0]
     output_pdf = fasta_file_preffix + '_proteins.fa'
@@ -79,14 +65,11 @@ def RNAfold(prodigal_cmd, fasta_file, constraint):
     prodigal_cmd += ' {input_fasta} --filename-full'
     if constraint == True: prodigal_cmd += " -C" 
         
-    
     prodigal_cmd = prodigal_cmd.format(prodigal=prodigal_cmd, input_fasta=fasta_file)
-
 
     with open(log_file, 'w') as lf:
         sp.call(prodigal_cmd.split(), stdout=lf)
         
-
     return
 
 
@@ -103,155 +86,139 @@ def expand_white_space(im1):
     dst = Image.new('RGB', (im1.width, im1.height + 80), color = "white")
     dst.paste(im1, (0, 80))
     
-
-    
     return dst
+    
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser("retrieve RNA seq structure")
+    parser.add_argument("-f", "--function_file", required=True, help="path to function file", type=str)
+    parser.add_argument("-t", "--target_folder", required=True, help="output folder for PS/JPG files", type=str)
+    parser.add_argument("-s", "--structure_folder", required=True, help="folder containing input FASTA/constraint files", type=str)
+    parser.add_argument("-a", "--summary", required=True, help="summary output file path", type=str)
+    parser.add_argument("-z", "--type", required=True, help="font file for labels (e.g., a .ttf path)", type=str)
+    parser.add_argument("-d", "--dms_path", required=True, help="path to saved dms files", type=str)
+    parser.add_argument("-u", "--untreated_path", required=True, help="path to saved untreated files", type=str)
+
+    args, _ = parser.parse_known_args()
+
+    in_path = Path(args.target_folder)
+    in_path.mkdir(parents=True, exist_ok=True)
+
+    fasta_files_to_run = sorted(glob.glob(str(Path(args.structure_folder) / "*")))
+
+    dms_path = args.dms_path
+    untreated_val_path = args.untreated_path
 
 
-    cmdline_parser = argparse.ArgumentParser('retrieve RNA seq structure')
 
-    cmdline_parser.add_argument('-f', '--function_file',
-                                default="",
-                                help='input file',
-                                required = True,
-                                type=str)
-    cmdline_parser.add_argument('-t', '--target_folder',
-                                default="",
-                                help='input file',
-                                required = True,
-                                type=str)
-    cmdline_parser.add_argument('-s', '--structure_folder',
-                                default="",
-                                help='input file',
-                                required = True,
-                                type=str)
-    cmdline_parser.add_argument('-a', '--summary',
-                                default="",
-                                help='output file summary',
-                                required = True,
-                                type=str)
-    cmdline_parser.add_argument('-z', '--type',
-                                default="",
-                                help='output file summary',
-                                required = True,
-                                type=str)
-                                
-    args, unknowns = cmdline_parser.parse_known_args()
-    
-    
-
-    in_path = args.target_folder
-    fasta_files_to_run = glob.glob(args.structure_folder + "*")
-    
-    #dms_path = "/media/sven/Elements/5UTR_finished/5UTR_not_dedup_10_cov/95_10_rna_files/95_10_rna/"
-    #untreated_val_path = "/media/sven/Elements/5UTR_finished/5UTR_not_dedup_10_cov/95_10_rna_files/t1/95_10_untreated_0.1/" 
-    
-    
-    print(fasta_files_to_run)
-    
     for constraint_file in fasta_files_to_run:
-    
-        dms_file_treated = constraint_file.split("/")[-1].split("treated")[0] + "treated.fa"
-        dms_file_untreated = constraint_file.split("/")[-1].split("treated")[0] + "untreated.fa"
-    
-        file_ = open(constraint_file)
-        lines=file_.readlines()
-        id_only = lines[0]
-        sequence_only = lines[1]
-        constraint_only= lines[2]
-        constraint_file_mod_path = "./" + constraint_file.split("/")[-1].split(".fa")[0]+ "_mod.fa"
-        
-        constraint_file_mod = open(constraint_file_mod_path, "w")
-        constraint_file_mod.write(id_only)
-        constraint_file_mod.write(sequence_only)
-        constraint_file_mod.close()
-        sub_string = constraint_file.split("/")[-1].split("_")[0]
+        cpath = Path(constraint_file)
+        basename = cpath.name
+        sub_string = basename.split("_")[0]
 
-        untreated_file = constraint_file.split("/")[-1].split("treated")[0] + "untreated_" + untreated_val_path.split("_")[-1].split("/")[0] +  ".fa"
+        dms_file_treated = basename.split("treated")[0] + "treated.fa"
+        dms_file_untreated = basename.split("treated")[0] + "untreated.fa"
 
-        untreated_path = untreated_val_path + untreated_file
+        with open(cpath) as fh:
+            lines = fh.readlines()
+        id_only, sequence_only, constraint_only = lines[0], lines[1], lines[2]
 
+        constraint_file_mod_path = Path("./") / (cpath.stem + "_mod.fa")
+        with open(constraint_file_mod_path, "w") as fh:
+            fh.write(id_only)
+            fh.write(sequence_only)
 
-        RNAfold("RNAfold",constraint_file_mod_path, False)
-        
+        # rebuild untreated path the same way as original code
+        untreated_file = (
+            basename.split("treated")[0]
+            + "untreated_"
+            + str(untreated_val_path).split("_")[-1].split("/")[0]
+            + ".fa"
+        )
+        untreated_path = Path(untreated_val_path) / untreated_file
 
-        
-        current_files = glob.glob("./*.ps")
-        ind = [i for i, s in enumerate(current_files) if sub_string in s]
-        sequence_name = in_path + current_files[ind[0]].split("ss")[0] +"_only_seq_"+ "ss.ps"
-        os.rename(current_files[ind[0]], in_path + current_files[ind[0]].split("ss")[0] +"_only_seq_"+ "ss.ps")
-                
-        RNAfold("RNAfold",constraint_file, True)
-        
+        # Run RNAfold for sequence-only
+        RNAfold("RNAfold", str(constraint_file_mod_path), False)
+        current_files = sorted(Path(".").glob("*.ps"))
+        match = [p for p in current_files if sub_string in p.name]
+        if not match:
+            raise FileNotFoundError(f"No .ps produced for {constraint_file_mod_path} (sequence-only)")
+        sequence_name = in_path / (match[0].name.split("ss")[0] + "_only_seq_ss.ps")
+        os.rename(str(match[0]), str(sequence_name))
 
-        
-        current_files = glob.glob("./*.ps")
-        ind = [i for i, s in enumerate(current_files) if sub_string in s]
-        treated_name = in_path + current_files[ind[0]].split("ss")[0] +"_treated_"+ "ss.ps"
-        os.rename(current_files[ind[0]], in_path + current_files[ind[0]].split("ss")[0] +"_treated_"+ "ss.ps")
-        color_ps_file(treated_name, dms_path + dms_file_treated.split("_constraints")[0] + "_treated.fa")
-        
-        RNAfold("RNAfold",untreated_path, True)
-        
+        # Run RNAfold for constrained (treated)
+        RNAfold("RNAfold", str(cpath), True)
+        current_files = sorted(Path(".").glob("*.ps"))
+        match = [p for p in current_files if sub_string in p.name]
+        if not match:
+            raise FileNotFoundError(f"No .ps produced for {cpath} (treated)")
+        treated_name = in_path / (match[0].name.split("ss")[0] + "_treated_ss.ps")
+        os.rename(str(match[0]), str(treated_name))
+        color_ps_file(
+            str(treated_name),
+            str(Path(dms_path) / (dms_file_treated.split("_constraints")[0] + "_treated.fa")),
+            args.function_file,
+        )
 
-        
-        current_files = glob.glob("./*.ps")
-        ind = [i for i, s in enumerate(current_files) if sub_string in s]
-        untreated_name = in_path + current_files[ind[0]].split("ss")[0] +"_untreated_"+ "ss.ps"
-        os.rename(current_files[ind[0]], in_path + current_files[ind[0]].split("ss")[0] +"_untreated_"+ "ss.ps")
+        # Run RNAfold for untreated
+        RNAfold("RNAfold", str(untreated_path), True)
+        current_files = sorted(Path(".").glob("*.ps"))
+        match = [p for p in current_files if sub_string in p.name]
+        if not match:
+            raise FileNotFoundError(f"No .ps produced for {untreated_path} (untreated)")
+        untreated_name = in_path / (match[0].name.split("ss")[0] + "_untreated_ss.ps")
+        os.rename(str(match[0]), str(untreated_name))
         font = ImageFont.truetype(args.type, size=30)
-        color_ps_file(untreated_name, dms_path + dms_file_untreated.split("_constraints")[0] + "_untreated.fa")
-        
-        
-        
-        
-        os. remove(constraint_file_mod_path)
-        psimage1=Image.open(sequence_name)
-        psimage1 = expand_white_space(psimage1)
+        color_ps_file(
+            str(untreated_name),
+            str(Path(dms_path) / (dms_file_untreated.split("_constraints")[0] + "_untreated.fa")),
+            args.function_file,
+        )
+
+        # cleanup temp file
+        try:
+            os.remove(constraint_file_mod_path)
+        except FileNotFoundError:
+            pass
+
+        # open, pad, annotate images
+        psimage1 = expand_white_space(Image.open(sequence_name))
         draw1 = ImageDraw.Draw(psimage1)
-        
-        l1 = draw1.textlength(constraint_file.split("/")[-1].split("_constraints")[0], font = font)
-        draw1.text((psimage1.width/2 - l1/2, 5), constraint_file.split("/")[-1].split("_constraints")[0] ,(0,0,0), font = font)
-        
-        l1 = draw1.textlength("sequence only", font = font)
-        draw1.text((psimage1.width/2 - l1/2, 40), "sequence only" ,(0,0,0), font = font)
-        
-        
-        psimage2=Image.open(treated_name)
-        psimage2 = expand_white_space(psimage2)
+        title = basename.split("_constraints")[0]
+        l1 = draw1.textlength(title, font=font)
+        draw1.text((psimage1.width / 2 - l1 / 2, 5), title, (0, 0, 0), font=font)
+        l1 = draw1.textlength("sequence only", font=font)
+        draw1.text((psimage1.width / 2 - l1 / 2, 40), "sequence only", (0, 0, 0), font=font)
+
+        psimage2 = expand_white_space(Image.open(treated_name))
         draw2 = ImageDraw.Draw(psimage2)
-        l2 = draw1.textlength("1lbeta-treated", font = font)
-        draw2.text((psimage2.width/2 - l2/2, 30), "1lbeta-treated" ,(0,0,0), font = font)
-        
-        
-        psimage3=Image.open(untreated_name)
-        psimage3 = expand_white_space(psimage3)
+        l2 = draw2.textlength("1lbeta-treated", font=font)
+        draw2.text((psimage2.width / 2 - l2 / 2, 30), "1lbeta-treated", (0, 0, 0), font=font)
 
+        psimage3 = expand_white_space(Image.open(untreated_name))
         draw3 = ImageDraw.Draw(psimage3)
-        l3 = draw3.textlength("untreated", font = font)
-        draw3.text((psimage3.width/2 -l3/2, 30), "untreated" ,(0,0,0), font = font)
-        
-        dst = get_concat_v(psimage1, psimage2, psimage3)
-        dst.save(in_path + constraint_file.split("/")[-1].split("treated")[0]  + ".jpg")
+        l3 = draw3.textlength("untreated", font=font)
+        draw3.text((psimage3.width / 2 - l3 / 2, 30), "untreated", (0, 0, 0), font=font)
 
-        os.remove(sequence_name)
-        os.remove(treated_name)
-        os.remove(untreated_name)
-        
-        log_files = glob.glob("./*.log")
-        for log in log_files:
+        # stack and save
+        dst = get_concat_v(psimage1, psimage2, psimage3)
+        out_jpg = in_path / (basename.split("treated")[0] + ".jpg")
+        dst.save(out_jpg)
+
+        # remove intermediate ps files
+        for p in (sequence_name, treated_name, untreated_name):
+            try:
+                os.remove(p)
+            except FileNotFoundError:
+                pass
+
+        # remove RNAfold logs
+        for log in glob.glob("./*.log"):
             try:
                 os.remove(log)
-            except:
+            except OSError:
                 print("already gone")
-        
-        
-    summary_file = open(args.summary, "w")
-    summary_file.write("finished")
-    summary_file.close()
 
-    
-
+    with open(args.summary, "w") as sf:
+        sf.write("finished")
 
