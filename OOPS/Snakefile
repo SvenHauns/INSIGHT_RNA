@@ -5,19 +5,18 @@ import math
 
 SAMPLES = set()
 sample_dict = {}
-
+print(config)
 SAMPLES = config["samples"].split(",")
 NC_FILES = config["nc"].split(",")
 CL_FILES = config["cl"].split(",")
+refseq_file = config["gff_path"]
+GENOME = config["genome"]
+MAPPED_DIR = config["mapped"]
 
-MAPPED_DIR = "../Preprocessing/mapped/"
-SEQUENCE_DIR = "sequences/"
-GFF_Path = "refseq_with_start_codon"
-GENOME = 'hg38'
 EXON_WINDOW_FILE ="files/exon_windows_with_junctions.bed"
 EXON_FILE = "files/exons.bed"
+
 FILE_FOLDER = "files/"
-refseq_file = "files/refseq_with_start_codon"
 COVERAGE = "coverage/"
 DESEQ_DATA = "deseq_data/"
 DESEQ_OUTPUT = "deseq_output/"

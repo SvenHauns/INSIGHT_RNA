@@ -6,18 +6,21 @@ import math
 SAMPLES = set()
 sample_dict = {}
 SAMPLES = config["samples"].split(",")
+GFF_Path = config["gff_path"]
+GENOME = config["genome"]
 
-MAPPED_DIR = "../Preprocessing/mapped/"
+
+MAPPED_DIR = config["mapped"]
 COVERAGE_DIR = "coverage/"
 SEQUENCE_DIR = "sequences/"
-GFF_Path = "refseq_with_start_codon"
-GENOME = 'hg38'
+
+
 DMS_PROFILES = "profiles/"
 SVG_PROFILES = "svgs/"
-BIT_Data = "hg38.2bit"
+BIT_Data = config["bit_data"]
 FUNCTION_FILE = "in_fun.txt"
 
-RUN = "3UTR"
+RUN = config["run_type"]
 
 rule all:
     input:

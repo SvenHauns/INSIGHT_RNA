@@ -8,20 +8,19 @@ SAMPLES = set()
 sample_dict = {}
 
 SAMPLES = config["samples"].split(",")
+gtf_file = config["gff_path"]
+model_path = config["model_path"]
+DESEQ_OUTPUT = config["deseq_output"]
+INPUT_DATA = "targets/"
+EXON_FILE = config["exons"]
+ECLIP_PATH = config["eclip"]
+
 
 COVERAGE = "coverage/"
-DESEQ_OUTPUT = "../OOPS3/deseq_output/"
 TARGET = "targets/"
 TARGET_OUTPUT = "targets/output/"
 TARGET_OUTPUT_5UTR = "targets/output_5utr/"
 TARGET_OUTPUT_3UTR = "targets/output_3utr/"
-
-INPUT_DATA = "targets/"
-EXON_FILE = "../OOPS3/files/exons.bed"
-ECLIP_PATH = "eClip/"
-
-gtf_file = "/mnt/StrucIntegration/DMS2/refseq_with_start_codon"
-model_path = "../RibonanzaNet/scripts/models/model_500_2_small.pt"
 OUTPUT_PDF = "pdf/"
 
 
