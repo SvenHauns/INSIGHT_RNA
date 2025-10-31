@@ -7,54 +7,12 @@ import numpy as np
 import argparse
 
 
-    
-
-
-
 def main_func(input_file, output_file):
-
-    # 1l beta
-    
-    
-    file_ = open(input_file)
-    file_2  = open(output_file, "w")
-    
-    for line_ in file_:
-    
-        
-        file_2.write(line_.split("\t")[0])
-        #file_2.write(line_.split("\t")[0].split("chr")[1])
-        file_2.write("\t")
-
-        
-        if  line_.split("\t")[5][0] == "-":
-        
-            
-
-            start = int(line_.split("\t")[1]) - 1
-            file_2.write(str(start))
-            file_2.write("\t")
-            file_2.write(line_.split("\t")[2])
-            
-            
-        elif line_.split("\t")[5][0] == "+":
-
-            start = int(line_.split("\t")[1]) - 1
-            file_2.write(str(start))
-            file_2.write("\t")
-            file_2.write(line_.split("\t")[2])
-        
-         
-        file_2.write("\t")
-        file_2.write(line_.split("\t")[3])
-        file_2.write("\t")
-        file_2.write(line_.split("\t")[4])
-        file_2.write("\t")
-        file_2.write(line_.split("\t")[5])
-        
-    file_.close()
-    file_2.close()
-
+    with open(input_file) as fin, open(output_file, "w") as fout:
+        for line in fin:
+            parts = line.strip().split("\t")
+            start = int(parts[1]) - 1
+            fout.write("\t".join([parts[0], str(start), parts[2], parts[3], parts[4], parts[5]]) + "\n")
 
 
 
