@@ -128,7 +128,6 @@ if __name__ == "__main__":
             fh.write(id_only)
             fh.write(sequence_only)
 
-        # rebuild untreated path the same way as original code
         untreated_file = (
             basename.split("treated")[0]
             + "untreated_"
@@ -137,7 +136,6 @@ if __name__ == "__main__":
         )
         untreated_path = Path(untreated_val_path) / untreated_file
 
-        # Run RNAfold for sequence-only
         RNAfold("RNAfold", str(constraint_file_mod_path), False)
         current_files = sorted(Path(".").glob("*.ps"))
         match = [p for p in current_files if sub_string in p.name]
@@ -146,7 +144,6 @@ if __name__ == "__main__":
         sequence_name = in_path / (match[0].name.split("ss")[0] + "_only_seq_ss.ps")
         os.rename(str(match[0]), str(sequence_name))
 
-        # Run RNAfold for constrained (treated)
         RNAfold("RNAfold", str(cpath), True)
         current_files = sorted(Path(".").glob("*.ps"))
         match = [p for p in current_files if sub_string in p.name]
@@ -160,7 +157,6 @@ if __name__ == "__main__":
             args.function_file,
         )
 
-        # Run RNAfold for untreated
         RNAfold("RNAfold", str(untreated_path), True)
         current_files = sorted(Path(".").glob("*.ps"))
         match = [p for p in current_files if sub_string in p.name]
@@ -181,7 +177,6 @@ if __name__ == "__main__":
         except FileNotFoundError:
             pass
 
-        # open, pad, annotate images
         psimage1 = expand_white_space(Image.open(sequence_name))
         draw1 = ImageDraw.Draw(psimage1)
         title = basename.split("_constraints")[0]
@@ -200,19 +195,16 @@ if __name__ == "__main__":
         l3 = draw3.textlength("untreated", font=font)
         draw3.text((psimage3.width / 2 - l3 / 2, 30), "untreated", (0, 0, 0), font=font)
 
-        # stack and save
         dst = get_concat_v(psimage1, psimage2, psimage3)
         out_jpg = in_path / (basename.split("treated")[0] + ".jpg")
         dst.save(out_jpg)
 
-        # remove intermediate ps files
         for p in (sequence_name, treated_name, untreated_name):
             try:
                 os.remove(p)
             except FileNotFoundError:
                 pass
 
-        # remove RNAfold logs
         for log in glob.glob("./*.log"):
             try:
                 os.remove(log)
