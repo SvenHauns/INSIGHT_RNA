@@ -92,33 +92,19 @@ def generate_windows_from_exons(bed_file, window_size=40, step_size=20):
         start_offsett2 = []
         added_exon = np.inf
         
-        if tx_id == "NM_001291367.2": print(exons)
-        
+
         
         for exon_num, exon in enumerate(exons):
                         
-        
-        
             pos = exon["start"]
             counter_left = 0
             counter_right = 0
             counter_middle = 0
             
-            if tx_id == "NM_001305275.2": print("NEW EXON")
-            if tx_id == "NM_001305275.2":  print(exon)
-            
-            
-            
             while pos <=  exon["end"]:
-            
-                #if tx_id == "NM_001291367.2": 
-                #     print("start")
-                #     print(pos)
-            
-            
+
                 if pos + window_size <= exon["end"]:
                 
-                    if tx_id == "NM_001305275.2": print("here1")
                     window_size_offset = window_size
                     
                     add = "junction_left_" + str(exon_num) + "_" + str(counter_left) if start_offsett != [] else "intra"
@@ -141,15 +127,6 @@ def generate_windows_from_exons(bed_file, window_size=40, step_size=20):
                     add
                     ))
                     
-                    if tx_id == "NM_001305275.2": print((
-                    exon["chrom"],
-                    pos,
-                    pos + window_size_offset,
-                    tx_id,
-                    exon["gene"],
-                    exon["strand"],
-                    add
-                    ))
 
                     if pos + window_size_offset - 20 < exon["start"]: pos = exon["start"] 
                     else: pos = pos + window_size_offset - 20
@@ -160,8 +137,6 @@ def generate_windows_from_exons(bed_file, window_size=40, step_size=20):
                         
                 elif pos <= exon["end"] and pos + window_size > exon["end"] and exon_num > added_exon:
                 
-                    if tx_id == "NM_001305275.2": print("here2")
-                    
                     #if start_offsett != []: counter_middle = counter_middle + 1
                     if start_offsett != []:  
                         window_size_offset = window_size - start_offsett[0] 
@@ -181,9 +156,6 @@ def generate_windows_from_exons(bed_file, window_size=40, step_size=20):
                         counter_left = counter_left + 1
                         counter_right = counter_right + 1
                         
-                    if tx_id == "NM_001305275.2": print(add)
-                    if tx_id == "NM_001305275.2": print(start_offsett)
-                    if tx_id == "NM_001305275.2": print(added_exon)
                     
                     windows.append((
                     exon["chrom"],
@@ -195,54 +167,28 @@ def generate_windows_from_exons(bed_file, window_size=40, step_size=20):
                     add
                     ))
                     
-                    if tx_id == "NM_001305275.2": print((
-                    exon["chrom"],
-                    pos,
-                    end,
-                    tx_id,
-                    exon["gene"],
-                    exon["strand"],
-                    add
-                    ))
 
-                    
-                    
                     if (end - pos) + current_start_offset != 40:
                         start_offsett2.append((end - pos) + current_start_offset)
-                    if tx_id == "NM_001305275.2": print((end - pos) + current_start_offset)
+
                     if start_offsett == []:
                         start_offsett = start_offsett2
                         added_exon = exon_num
                         start_offsett2 = []
-                        #counter_right = len(start_offsett) + 1
-                        if tx_id == "NM_001305275.2": print("start offsett set")
-                        if tx_id == "NM_001305275.2": print(len(start_offsett))
                         
                     if start_offsett == []:
                         added_exon = np.inf
                         
                     
                     assert (end - pos) + current_start_offset <= 40
-                    
-                    
+
                     
                     if pos + window_size_offset - 20 < exon["start"]: pos = exon["start"] 
                     else: pos = pos + window_size_offset - 20
-                    
-                    
 
-                    
                 elif pos <= exon["end"] and pos + window_size > exon["end"] and (exon_num > added_exon) == False:
                 
 
-                    if tx_id == "NM_001305275.2": print("here3")
-                    if tx_id == "NM_001305275.2": print(added_exon)
-                    if tx_id == "NM_001305275.2": print(exon_num)
-                    if tx_id == "NM_001305275.2": print(len(start_offsett))
-                    
-                    #if start_offsett != []: counter_right = len(start_offsett)
-
-                    
                     windows.append((
                     exon["chrom"],
                     pos,
@@ -252,15 +198,7 @@ def generate_windows_from_exons(bed_file, window_size=40, step_size=20):
                     exon["strand"],
                     "junction_right_" + str(exon_num) + "_" + str(counter_right)
                     ))
-                    if tx_id == "NM_001305275.2": print((
-                    exon["chrom"],
-                    pos,
-                    exon["end"],
-                    tx_id,
-                    exon["gene"],
-                    exon["strand"],
-                    "junction_right_" + str(exon_num) + "_" + str(counter_right)
-                    ))
+
                     
                     counter_right = counter_right + 1
                     start_offsett.append(exon["end"] - pos)

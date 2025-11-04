@@ -860,53 +860,6 @@ def save_conjunction(file_name, in_list):
     
     
     
-def create_gene_sublist(starts, ends, exon_number):
-
-
-    full_gene_exons_start = []
-    full_gene_exons_end = []
-    
-    for enum, start in enumerate(starts):
-        exons = exon_number[enum]
-        
-        exon_list_start_full = []
-        exon_list_end_full = []
-        
-        exon_list_start = []
-        exon_list_end = []
-        
-        last_ex = 1
-        
-        for ex_num, ex in enumerate(exons):
-            if ex > last_ex:
-                exon_list_start.append(starts[enum][ex_num])
-                exon_list_end.append(ends[enum][ex_num])
-                
-                
-                last_ex = ex
-                
-            else:
-                if exon_list_start != []: exon_list_start_full.append(exon_list_start)
-                if exon_list_end != []: exon_list_end_full.append(exon_list_end)
-                
-                exon_list_start = []
-                exon_list_end = []
-    
-                exon_list_start.append(starts[enum][ex_num])
-                exon_list_end.append(ends[enum][ex_num])
-                
-                last_ex = ex
-                
-        if  exon_list_start != []:exon_list_start_full.append(exon_list_start)
-        if  exon_list_end != []: exon_list_end_full.append(exon_list_end)
-                
-        full_gene_exons_start.append(exon_list_start_full)
-        full_gene_exons_end.append(exon_list_end_full)
-                
-
-                
-    return full_gene_exons_start, full_gene_exons_end
-    
     
     
 def coverage_metric_check(exon_list):

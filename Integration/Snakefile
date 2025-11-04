@@ -14,7 +14,7 @@ DESEQ_OUTPUT = config["deseq_output"]
 INPUT_DATA = "targets/"
 EXON_FILE = config["exons"]
 ECLIP_PATH = config["eclip"]
-
+RUN_TYPE = config["run_type"]
 
 COVERAGE = "coverage/"
 TARGET = "targets/"
@@ -33,7 +33,7 @@ rule all:
 
 rule combine_information:
     input:
-        input_dms = lambda wildcards: f"{INPUT_DATA}{wildcards.sample}/{wildcards.sample}.dms_coverage_all_3utr.txt",
+        input_dms = lambda wildcards: f"{INPUT_DATA}{wildcards.sample}/{wildcards.sample}.dms_coverage_all_{RUN_TYPE.lower()}.txt",
         target_file = lambda wildcards: f"{TARGET}{wildcards.sample}.correlation_rnaplfold_oops_summary_target.txt",
     output:
         output_summary = f"{TARGET}{{sample}}.combination_summary.txt",
@@ -45,7 +45,7 @@ rule combine_information:
         mkdir -p {TARGET_OUTPUT_5UTR}
         mkdir -p {TARGET_OUTPUT_3UTR}
 
-        python scripts/combine_information_3utr.py \
+        python scripts/combine_information_{RUN_TYPE.lower()}.py \
             --dms_analysis_file {input.input_dms} \
             --target_file {input.target_file} \
             --target_folder {TARGET_OUTPUT} \
@@ -59,24 +59,6 @@ rule combine_information:
             --eclip_path {ECLIP_PATH}
         """
         
-rule extracted_background:
-    input:
-        input_dms = lambda wildcards: f"{INPUT_DATA}{wildcards.sample}/{wildcards.sample}.dms_coverage_all_3utr.txt",
-    output:
-        peak_sequences = f"{TARGET}{{sample}}.peak_sequences.fa",
-        baseline_file = f"{TARGET}{{sample}}.baseline_sequences.fa",
-    conda:
-        "envs/rnafold.yaml"
-    shell:
-        """
-        mkdir -p {TARGET_OUTPUT}
-        python scripts/extract_background_regions.py \
-            --dms_analysis_file {input.input_dms} \
-            --baseline_file {output.baseline_file} \
-            --oops_seq_folder {DESEQ_OUTPUT} \
-            --peak_sequences {output.peak_sequences} \
-            --exon_file {EXON_FILE}
-        """
 
 
 rule run_varna:
@@ -111,7 +93,7 @@ rule run_varna:
 rule create_pdf:
     input:
         summary = lambda wildcards: f"{TARGET}{{sample}}.varna_summary.txt",
-        input_dms = lambda wildcards: f"{INPUT_DATA}{wildcards.sample}/{wildcards.sample}.dms_coverage_all_3utr.txt",
+        input_dms = lambda wildcards: f"{INPUT_DATA}{wildcards.sample}/{wildcards.sample}.dms_coverage_all_{RUN_TYPE.lower()}.txt",
     output:
         output_pdf = f"{OUTPUT_PDF}{{sample}}.pdf_summary.txt",
     conda:
