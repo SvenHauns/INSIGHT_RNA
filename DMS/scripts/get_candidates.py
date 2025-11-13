@@ -580,7 +580,7 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
 
-    utr_regions, gene_name_dict, strand_dict, chr_dict = etract_refseq_utr(args.gff_path, args.run_type)
+    utr_regions, gene_name_dict, strand_dict, chr_dict = extract_refseq_utr(args.gff_path, args.run_type)
 
     return_chr_type = {"NC_000001":"chr1","NC_000002":"chr2","NC_000003":"chr3","NC_000004":"chr4","NC_000005":"chr5","NC_000006":"chr6","NC_000007":"chr7","NC_000008":"chr8","NC_000009":"chr9"
     ,"NC_000010":"chr10","NC_000011":"chr11","NC_000012":"chr12","NC_000013":"chr13","NC_000014":"chr14","NC_000015":"chr15","NC_000016":"chr16","NC_000017":"chr17","NC_000018":"chr18","NC_000019":"chr19",
@@ -607,9 +607,10 @@ if __name__ == '__main__':
         coverage2 = [[],[],[],[], []]    
             
         avg_protein_list = []
-       
+
         for en, key in enumerate(list(utr_regions.keys())):
-               
+                if key == "": continue
+
                 chr_ =chr_dict[key]
                 
                 if chr_ == "chrMT": continue
