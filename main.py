@@ -88,12 +88,17 @@ def main():
     parser.add_argument("--nc_samples_oops", type=str, default=None, help="samples to process")
     parser.add_argument("--cl_samples_oops", type=str, default=None, help="samples to process")
     parser.add_argument("--samples", type=str, default=None, help="samples to process")
+    parser.add_argument("--run_type", type=str, default=None, help="DMS run type, 3UTR, 5UTR")
+    
     
     args = parser.parse_args()
+    
     if args.samples_oops != None: GLOBAL["oops_samples"] = args.samples_oops
     if args.samples_oops != None: GLOBAL["nc"] = args.nc_samples_oops
     if args.samples_oops != None: GLOBAL["cl"] = args.cl_samples_oops
     if args.samples != None: GLOBAL["samples"] = args.samples
+    if args.run_type != None: GLOBAL["run_type"] = args.run_type
+    
     
     for p in PIPELINES:
         merged_cfg = {**GLOBAL, **p.get("extra_config", {})}
