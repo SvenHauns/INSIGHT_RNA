@@ -6,15 +6,16 @@ from pathlib import Path
 
 GLOBAL = {
     "samples": "data/samples.tsv",
+    "oops_samples": "data/samples.tsv",
     "nc": "data/samples.tsv",
     "cl": "data/samples.tsv",
     "reference": "ref/genome.fa",
-    "mapped": "../Preprocessing/mapped/",
+    "mapped": "Preprocessing/mapped/",
     "gff_path": "refseq_with_start_codon",
     "genome": "hg38",
     "run_type": "3UTR",
-    "deseq_output": "../OOPS3/deseq_output/",
-    "exons": "../OOPS3/files/exons.bed",
+    "deseq_output": "OOPS3/deseq_output/",
+    "exons": "OOPS3/files/exons.bed",
     
 }
 
@@ -79,12 +80,21 @@ def run_pipeline(snakefile: str, name: str, config: dict, cores: int, dry_run: b
 
 def main():
     parser = argparse.ArgumentParser(description="Run three snakemake pipelines sequentially with shared Globals.")
-    parser.add_argument("--cores", type=int, default=8, help="cores to pass to each pipeline.")
+    parser.add_argument("--cores", type=int, default=1, help="cores to pass to each pipeline.")
     parser.add_argument("--dry-run", action="store_true", help="snakemake --dry-run for all pipelines.")
     parser.add_argument("--use-conda", action="store_true", help="enable snakemake --use-conda.")
     parser.add_argument("--profile", type=str, default=None, help="Snakemake --profile name/path (optional).")
+    parser.add_argument("--samples_oops", type=str, default=None, help="samples to process")
+    parser.add_argument("--nc_samples_oops", type=str, default=None, help="samples to process")
+    parser.add_argument("--cl_samples_oops", type=str, default=None, help="samples to process")
+    parser.add_argument("--samples", type=str, default=None, help="samples to process")
+    
     args = parser.parse_args()
-
+    if args.samples_oops != None: GLOBAL["oops_samples"] = args.samples_oops
+    if args.samples_oops != None: GLOBAL["nc"] = args.nc_samples_oops
+    if args.samples_oops != None: GLOBAL["cl"] = args.cl_samples_oops
+    if args.samples != None: GLOBAL["samples"] = args.samples
+    
     for p in PIPELINES:
         merged_cfg = {**GLOBAL, **p.get("extra_config", {})}
         run_pipeline(
