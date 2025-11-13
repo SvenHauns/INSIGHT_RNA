@@ -45,7 +45,7 @@ rule combine_information:
         mkdir -p {TARGET_OUTPUT_5UTR}
         mkdir -p {TARGET_OUTPUT_3UTR}
 
-        python scripts/combine_information_{RUN_TYPE.lower()}.py \
+        python Integration/scripts/combine_information_{RUN_TYPE.lower()}.py \
             --dms_analysis_file {input.input_dms} \
             --target_file {input.target_file} \
             --target_folder {TARGET_OUTPUT} \
@@ -73,17 +73,17 @@ rule run_varna:
     shell:
         """
         mkdir -p {TARGET_OUTPUT}
-        python scripts/run_varna.py \
+        python Integration/scripts/run_varna.py \
             --target_folder {TARGET_OUTPUT} \
             --output_summary {output.output_file} \
             --version 1
 
-        python scripts/run_varna.py \
+        python Integration/scripts/run_varna.py \
             --target_folder {TARGET_OUTPUT_5UTR} \
             --output_summary {output.output_file2} \
             --version 2
 
-        python scripts/run_varna.py \
+        python Integration/scripts/run_varna.py \
             --target_folder {TARGET_OUTPUT_3UTR} \
             --output_summary {output.output_file3} \
             --version 3
@@ -102,7 +102,7 @@ rule create_pdf:
         """
         mkdir -p {OUTPUT_PDF}
         
-        python scripts/create_pdf.py \
+        python Integration/scripts/create_pdf.py \
             --output_folder {TARGET_OUTPUT} \
             --output_folder_3utr {TARGET_OUTPUT_3UTR} \
             --output_folder_5utr {TARGET_OUTPUT_5UTR} \

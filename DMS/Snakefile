@@ -45,7 +45,7 @@ rule get_target_regions:
     shell:
         """
         mkdir -p {COVERAGE_DIR}
-        python scripts/get_candidates.py --gff_path {GFF_Path} --bamfile {input} --target_folder {COVERAGE_DIR} --run_type {RUN}
+        python DMS/scripts/get_candidates.py --gff_path {GFF_Path} --bamfile {input} --target_folder {COVERAGE_DIR} --run_type {RUN}
         """
         
 rule convert_to_list:
@@ -69,10 +69,10 @@ rule convert_to_list:
     shell:
         """
         mkdir -p {COVERAGE_DIR}
-        python scripts/create_list2_ref.py --output {output.output1} --formated_output {output.output1_formated} --input {input.input1}
-        python scripts/create_list2_ref.py --output {output.output2} --formated_output {output.output2_formated} --input {input.input2}
-        python scripts/create_list2_ref.py --output {output.output3} --formated_output {output.output3_formated} --input {input.input3}
-        python scripts/create_list2_ref.py --output {output.output4} --formated_output {output.output4_formated} --input {input.input4}
+        python DMS/scripts/create_list2_ref.py --output {output.output1} --formated_output {output.output1_formated} --input {input.input1}
+        python DMS/scripts/create_list2_ref.py --output {output.output2} --formated_output {output.output2_formated} --input {input.input2}
+        python DMS/scripts/create_list2_ref.py --output {output.output3} --formated_output {output.output3_formated} --input {input.input3}
+        python DMS/scripts/create_list2_ref.py --output {output.output4} --formated_output {output.output4_formated} --input {input.input4}
         """
         
         
@@ -92,10 +92,10 @@ rule get_bed_file:
     shell:
         """
         mkdir -p {COVERAGE_DIR}
-        python scripts/create_bed_from_list.py --folder {COVERAGE_DIR} --input {input.input1}
-        python scripts/create_bed_from_list.py --folder {COVERAGE_DIR} --input {input.input2}
-        python scripts/create_bed_from_list.py --folder {COVERAGE_DIR} --input {input.input3}
-        python scripts/create_bed_from_list.py --folder {COVERAGE_DIR} --input {input.input4}
+        python DMS/scripts/create_bed_from_list.py --folder {COVERAGE_DIR} --input {input.input1}
+        python DMS/scripts/create_bed_from_list.py --folder {COVERAGE_DIR} --input {input.input2}
+        python DMS/scripts/create_bed_from_list.py --folder {COVERAGE_DIR} --input {input.input3}
+        python DMS/scripts/create_bed_from_list.py --folder {COVERAGE_DIR} --input {input.input4}
         """
         
         
@@ -115,10 +115,10 @@ rule fix_bed:
     shell:
         """
         mkdir -p {COVERAGE_DIR}
-        python scripts/fix_bed.py --output {output.output1} --input {input.input1}
-        python scripts/fix_bed.py --output {output.output2} --input {input.input2}
-        python scripts/fix_bed.py --output {output.output3} --input {input.input3}
-        python scripts/fix_bed.py --output {output.output4} --input {input.input4}
+        python DMS/scripts/fix_bed.py --output {output.output1} --input {input.input1}
+        python DMS/scripts/fix_bed.py --output {output.output2} --input {input.input2}
+        python DMS/scripts/fix_bed.py --output {output.output3} --input {input.input3}
+        python DMS/scripts/fix_bed.py --output {output.output4} --input {input.input4}
         """
 
 rule extract_genomic_dna:
@@ -137,10 +137,10 @@ rule extract_genomic_dna:
     shell:
         """
         mkdir -p {SEQUENCE_DIR}
-        python tools/extract_genomic_dna/extract_genomic_dna.py --input {input.input1} --genome {GENOME} --input_format interval --columns '1,2,3,6,4'  --reference_genome_source cached --reference_genome {BIT_Data} --output_format fasta --fasta_header_type bedtools_getfasta_default --output  {output.output1}
-        python tools/extract_genomic_dna/extract_genomic_dna.py --input {input.input2} --genome {GENOME} --input_format interval --columns '1,2,3,6,4'  --reference_genome_source cached --reference_genome {BIT_Data} --output_format fasta --fasta_header_type bedtools_getfasta_default --output  {output.output2}
-        python tools/extract_genomic_dna/extract_genomic_dna.py --input {input.input3} --genome {GENOME} --input_format interval --columns '1,2,3,6,4'  --reference_genome_source cached --reference_genome {BIT_Data} --output_format fasta --fasta_header_type bedtools_getfasta_default --output  {output.output3}
-        python tools/extract_genomic_dna/extract_genomic_dna.py --input {input.input4} --genome {GENOME} --input_format interval --columns '1,2,3,6,4'  --reference_genome_source cached --reference_genome {BIT_Data} --output_format fasta --fasta_header_type bedtools_getfasta_default --output  {output.output4}
+        python DMS/tools/extract_genomic_dna/extract_genomic_dna.py --input {input.input1} --genome {GENOME} --input_format interval --columns '1,2,3,6,4'  --reference_genome_source cached --reference_genome {BIT_Data} --output_format fasta --fasta_header_type bedtools_getfasta_default --output  {output.output1}
+        python DMS/tools/extract_genomic_dna/extract_genomic_dna.py --input {input.input2} --genome {GENOME} --input_format interval --columns '1,2,3,6,4'  --reference_genome_source cached --reference_genome {BIT_Data} --output_format fasta --fasta_header_type bedtools_getfasta_default --output  {output.output2}
+        python DMS/tools/extract_genomic_dna/extract_genomic_dna.py --input {input.input3} --genome {GENOME} --input_format interval --columns '1,2,3,6,4'  --reference_genome_source cached --reference_genome {BIT_Data} --output_format fasta --fasta_header_type bedtools_getfasta_default --output  {output.output3}
+        python DMS/tools/extract_genomic_dna/extract_genomic_dna.py --input {input.input4} --genome {GENOME} --input_format interval --columns '1,2,3,6,4'  --reference_genome_source cached --reference_genome {BIT_Data} --output_format fasta --fasta_header_type bedtools_getfasta_default --output  {output.output4}
         """
         
 
@@ -184,13 +184,13 @@ rule extract_dms_profiles:
         mkdir -p {DMS_PROFILES}{{sample}}/{SVG_PROFILES}
         
         
-        python scripts/create_profile.py --coverage_list {input.input3_coverage_list} --extracted_sequences {input.input3_seq} \\
+        python DMS/scripts/create_profile.py --coverage_list {input.input3_coverage_list} --extracted_sequences {input.input3_seq} \\
         --fixed_bed_file {input.input3_fixed_bed} --bam_file {input.input_bam} --save_path {params.output_dict} --output_file {output.output3} \\
         --stable_dict {output.output3_stable_dict} --changed_dict {output.output3_changed_dict}
-        python scripts/create_profile.py --coverage_list {input.input1_coverage_list} --extracted_sequences {input.input1_seq} \\
+        python DMS/scripts/create_profile.py --coverage_list {input.input1_coverage_list} --extracted_sequences {input.input1_seq} \\
         --fixed_bed_file {input.input1_fixed_bed} --bam_file {input.input_bam} --save_path {params.output_dict} --output_file {output.output1} \\
         --stable_dict {output.output1_stable_dict} --changed_dict {output.output1_changed_dict}
-        python scripts/create_profile.py --coverage_list {input.input2_coverage_list} --extracted_sequences {input.input2_seq} \\
+        python DMS/scripts/create_profile.py --coverage_list {input.input2_coverage_list} --extracted_sequences {input.input2_seq} \\
         --fixed_bed_file {input.input2_fixed_bed} --bam_file {input.input_bam} --save_path {params.output_dict} --output_file {output.output2} \\
         --stable_dict {output.output2_stable_dict} --changed_dict {output.output2_changed_dict}
         """
@@ -212,10 +212,10 @@ rule retrieve_rna_structure:
     shell:
         """
         mkdir -p {COVERAGE_DIR}
-        python scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input1} --structure_folder {} --summary {output.output1}
-        python scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input2} --structure_folder {} --summary {output.output2}
-        python scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input3} --structure_folder {} --summary {output.output13}
-        python scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input4} --structure_folder {} --summary {output.output4}
+        python DMS/scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input1} --structure_folder {} --summary {output.output1}
+        python DMS/scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input2} --structure_folder {} --summary {output.output2}
+        python DMS/scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input3} --structure_folder {} --summary {output.output13}
+        python DMS/scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input4} --structure_folder {} --summary {output.output4}
         """
         
 

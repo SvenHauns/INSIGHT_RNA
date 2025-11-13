@@ -6,7 +6,7 @@ import math
 SAMPLES = set()
 sample_dict = {}
 print(config)
-SAMPLES = config["samples"].split(",")
+SAMPLES = config["oops_samples"].split(",")
 NC_FILES = config["nc"].split(",")
 CL_FILES = config["cl"].split(",")
 refseq_file = config["gff_path"]
@@ -41,7 +41,7 @@ rule extract_bed:
     shell:
         """
         mkdir -p {FILE_FOLDER}
-        python scripts/extract_bed.py --input_file {input} --output_file {output.output2} --output_window_file {output.output1}
+        python OOPS/scripts/extract_bed.py --input_file {input} --output_file {output.output2} --output_window_file {output.output1}
         """
     
 rule bedtools_coverage:
@@ -71,7 +71,7 @@ rule create_deseq2_data:
         
         shell(f"""
             mkdir -p {DESEQ_DATA}
-            python scripts/create_deseq2_data.py \
+            python OOPS/scripts/create_deseq2_data.py \
                 --crosslinked_files {cl_files} \
                 --non_crosslinked_files {nc_files} \
                 --meta_data_file {output.meta_output} \
@@ -92,5 +92,5 @@ rule run_deseq2_full:
     shell:
         """
         mkdir -p {DESEQ_OUTPUT}
-        python scripts/run_deseq2.py --input_meta_file {input.meta_input} --input_folder {params.data} --output_folder {params.output} --deseq_summary {output.summary}
+        python OOPS/scripts/run_deseq2.py --input_meta_file {input.meta_input} --input_folder {params.data} --output_folder {params.output} --deseq_summary {output.summary}
         """
