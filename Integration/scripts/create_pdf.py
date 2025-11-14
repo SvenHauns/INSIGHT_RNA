@@ -773,16 +773,6 @@ if __name__ == "__main__":
                                 help='output folder',
                                 required = True,
                                 type=str)
-    cmdline_parser.add_argument('-a', '--output_folder_3utr',
-                                default="",
-                                help='output_folder_3utr',
-                                required = True,
-                                type=str)
-    cmdline_parser.add_argument('-b', '--output_folder_5utr',
-                                default="",
-                                help='output_folder_5utr',
-                                required = True,
-                                type=str)
     cmdline_parser.add_argument('-c', '--dms_analysis_file',
                                 default="",
                                 help='dms file',
@@ -798,6 +788,12 @@ if __name__ == "__main__":
                                 help='pdf output folder',
                                 required = True,
                                 type=str)
+    cmdline_parser.add_argument('-a', '--run_type',
+                                default="3utr",
+                                help='run_type',
+                                required = True,
+                                type=str)
+                                
                                 
     args, unknowns = cmdline_parser.parse_known_args()
     
@@ -812,152 +808,25 @@ if __name__ == "__main__":
             dms_dict[line_[1:-1]] = [dms_file_open[enum+1], dms_file_open[enum+2], dms_file_open[enum+3], dms_file_open[enum+4]]
     
     
-    folders = glob.glob(args.output_folder_3utr + "/*")
+    folders = glob.glob(args.output_folder + "/*")
     
-
-    """
-    ['targets/output/NM_001206797.3/dms_RNAfold_varna.svg', 'targets/output/NM_001206797.3/oops_double_RNAfold_varna.svg', 'targets/output/NM_001206797.3/oops_double_dms_RNAfold_varna.svg', 'targets/output/NM_001206797.3/oops_single_RNAfold_varna.svg', 'targets/output/NM_001206797.3/oops_single_dms_RNAfold_varna.svg', 'targets/output/NM_001206797.3/plain_RNAfold_varna.svg']
-
-    """
-    print(folders)
     
     for folder in folders:
     
         id_ = folder.split("/")[-1]
-        """
-        varna_files = sorted(glob.glob(folder + "/*.svg"))
-        if varna_files == []: continue
-        id_ = folder.split("/")[-1]
-        print(id_)
-        sequence = dms_dict[id_][0]
-        dms = dms_dict[id_][2]
-        coverage = dms_dict[id_][3]
-        name_ = id_
-        print(varna_files)
-
-        header = open(folder + "/complete_info.txt").readlines()[0]
-
-        region_info = open(folder + "/eclip_regions.txt").readlines()
-        region_info = "\n".join(region_info)
-        region_info = region_info.replace("\t", " ")
-        
-        captions = ["dms**", "oops-double**", "oops-double-predicted**", "oops-single**", "oops-single-predicted**", "plain_sequence**"]
-        print(varna_files)
-        
-        
-
-        for vimg in varna_files: fix_svg_dimensions(vimg, width="2000", height="2000")   
-        
-        for x in range(0, len(captions), 3):
-            
-
-            
-            text_a = "**" + header[:-1] +" --- " + captions[x] + "\n\n" + region_info + "\n" + "\n" 
-            text_b = "**" + header[:-1] + " --- " + captions[x+1] + "\n\n" + region_info  + "\n" + "\n"
-            text_c = "**" + header[:-1] + " --- "+ captions[x+2] +"\n\n" + region_info  + "\n" + "\n" 
-            
-            text_block = [text_a, text_b, text_c]
-            print("text_block")
-            print(text_block)
-            
-            create_pdf_with_vector_svg_and_text(varna_files[x:x+3], text_block, header, args.pdf_folder + "/" + id_ + "_" + str(x) + ".pdf")
-            
-        """
-        #### 5'UTR files
-        
-        varna_files_5utr = sorted(glob.glob(args.output_folder_5utr +   id_ + "/*.png"))
-        
         if id_.split(".")[-1] == "fa": continue
-        print(id_)
-        print(id_.split(".")[-1] )
-        header = open(args.output_folder_3utr + id_ +"/complete_info_3utr.txt").readlines()[0]
+        header = open(args.output_folder + id_ +f"/complete_info_{args.run_type}.txt").readlines()[0]
         
-        print("5 utr fiöes")
-        print(varna_files_5utr)
+        varna_files = [args.output_folder +   id_ + "/plain_RNAfold_varna.png", args.output_folder +   id_ + "/dms_RNAfold_varna.png", args.output_folder +   id_ + "/eclip_RNAfold_varna.png" , args.output_folder +   id_ + "/oops_single_RNAfold_varna.png", args.output_folder +   id_ + "/ml_dms_RNAfold_varna.png" , args.output_folder +   id_ + "/oops_single_dms_RNAfold_varna.png"]
         
-        varna_files_5utr = [args.output_folder_3utr +   id_ + "/plain_RNAfold_varna.png", args.output_folder_3utr +   id_ + "/dms_RNAfold_varna.png", args.output_folder_3utr +   id_ + "/eclip_RNAfold_varna.png" , args.output_folder_3utr +   id_ + "/oops_single_RNAfold_varna.png", args.output_folder_3utr +   id_ + "/ml_dms_RNAfold_varna.png" , args.output_folder_3utr +   id_ + "/oops_single_dms_RNAfold_varna.png"]
-        
-        print(varna_files_5utr)
-        
-        captions_5utr = ["plain", "dms", "protein", "protein+dms", "dms+ml", "fully integrated"]
-        print(args.output_folder_5utr)
-        print(varna_files_5utr)
-        print(captions_5utr)
+        captions_utr = ["plain", "dms", "protein", "protein+dms", "dms+ml", "fully integrated"]
 
         try:
-            create_pdf_with_6_images(varna_files_5utr, captions_5utr, header, args.pdf_folder + "/" + id_  + "_3utr" + ".pdf")
+            create_pdf_with_6_images(varna_files, captions_utr, header, args.pdf_folder + "/" + id_  + "_utr" + ".pdf")
         except:
-            max_width = max(img.width for img in varna_files_5utr)
-            resized_images = [img.resize((max_width, int(img.height * max_width / img.width))) for img in varna_files_5utr]
-            create_pdf_with_6_images(resized_images, captions_5utr, header, args.pdf_folder + "/" + id_  + "_3utr" + ".pdf")
-            print("exceptiopn")
-        
-        """
-        ['targets/output_3utr/NM_001318120.2/dms_RNAfold_varna.png', 'targets/output_3utr/NM_001318120.2/eclip_RNAfold_varna.png', 'targets/output_3utr/NM_001318120.2/oops_double_RNAfold_varna.png', 'targets/output_3utr/NM_001318120.2/oops_double_dms_RNAfold_varna.png', 'targets/output_3utr/NM_001318120.2/oops_single_RNAfold_varna.png', 'targets/output_3utr/NM_001318120.2/oops_single_dms_RNAfold_varna.png', 'targets/output_3utr/NM_001318120.2/plain_RNAfold_varna.png']
-
-        if os.path.exists(args.output_folder_5utr +   id_  + "/eclip_regions_5utr.txt") == False: continue
-
-        region_info = open(args.output_folder_5utr +   id_  + "/eclip_regions_5utr.txt").readlines()
-        region_info = "\n".join(region_info)
-        region_info = region_info.replace("\t", " ")
-        if len(varna_files_5utr) != len(captions_5utr): continue
-        for vimg in varna_files_5utr: fix_svg_dimensions(vimg, width="400", height="400")
-        
-        for x in range(0, len(captions_5utr), 3):
-
-            
-
-            
-            #text_a = "**" + header[:-1] +" --- " + captions_5utr[x] + "\n\n" + region_info + "\n" + "\n" 
-            #text_b = "**" + header[:-1] + " --- " + captions_5utr[x+1] + "\n\n" + region_info  + "\n" + "\n"
-            #text_c = "**" + header[:-1] + " --- "+ captions_5utr[x+2] +"\n\n" + region_info  + "\n" + "\n" 
-            
-            text_a = captions_5utr[x]
-            text_b =captions_5utr[x+1]
-            text_c = captions_5utr[x+2]
-            
-            text_block = [text_a, text_b, text_c]
-
-            #create_pdf_with_vector_svg_and_text(varna_files_5utr[x:x+3], text_block, header, args.pdf_folder + "/" + id_  + "_5utr_"+ str(x) + ".pdf")
-            
-            
-            create_pdf_with_vector_svg_grid_and_captions(varna_files_5utr[x:x+3], text_block, header, args.pdf_folder + "/" + id_  + "_5utr_"+ str(x) + ".pdf",
-                                              fallback_size=(1500, 1500))
-                                                 
-            #create_pdf_column_with_fixed_size_svgs(varna_files_5utr[x:x+3], text_block, args.pdf_folder + "/" + id_  + "_5utr_"+ str(x) + ".pdf")
-            
-            #create_pdf_from_single_svg(varna_files_5utr[x], args.pdf_folder + "/" + id_  + "_5utr_"+ str(x) + ".pdf")
-            #
-            #convert_svg_to_pdf(varna_files_5utr[x], args.pdf_folder + "/" + id_  + "_5utr_"+ str(x) + ".pdf")
-                                                 
-                                                 
-        
-        #### 3'UTR files
-
-        varna_files_3utr = sorted(glob.glob(args.output_folder_3utr +  id_ + "/*.svg"))
-        captions_3utr = ["dms**", "oops-double**", "oops-double-predicted**", "oops-single**", "oops-single-predicted**", "plain_sequence**"]
-        
-
-        if len(varna_files_3utr) != len(captions_3utr): continue
-        
-        for vimg in varna_files_3utr: fix_svg_dimensions(vimg, width="1500", height="1500")
-        if os.path.exists(folder + "/eclip_regions_3utr.txt") == False: continue
-        region_info = open(folder + "/eclip_regions_3utr.txt").readlines()
-        region_info = "\n".join(region_info)
-        region_info = region_info.replace("\t", " ")
-        for x in range(0, len(captions_3utr), 3):
-
-
-        
-            text_a = "**" + header[:-1] +" --- " + captions_3utr[x] + "\n\n" + region_info + "\n" + "\n" 
-            text_b = "**" + header[:-1] + " --- " + captions_3utr[x+1] + "\n\n" + region_info  + "\n" + "\n"
-            text_c = "**" + header[:-1] + " --- "+ captions_3utr[x+2] +"\n\n" + region_info  + "\n" + "\n" 
-            text_block = [text_a, text_b, text_c]
-            create_pdf_with_vector_svg_and_text(varna_files_3utr[x:x+3], text_block, header, args.pdf_folder + "/" + id_ + "_3utr_" + str(x) + "_.pdf")
-        """
-    print("pdfs")
-    
-    print(glob.glob(args.pdf_folder + "/*.pdf"))
+            max_width = max(img.width for img in varna_files)
+            resized_images = [img.resize((max_width, int(img.height * max_width / img.width))) for img in varna_files]
+            create_pdf_with_6_images(resized_images, captions_utr, header, args.pdf_folder + "/" + id_  + "_utr" + ".pdf")
     
     merge_pdfs(glob.glob(args.pdf_folder + "/*.pdf"), args.output_pdf)
 

@@ -15,12 +15,12 @@ INPUT_DATA = "profiles/"
 EXON_FILE = config["exons"]
 ECLIP_PATH = config["eclip"]
 RUN_TYPE = config["run_type"].lower()
-
+RUN_VERSION = 2 if RUN_TYPE == "3utr" else 3
 COVERAGE = "coverage/"
 TARGET = "targets/"
 TARGET_OUTPUT = "targets/output/"
-TARGET_OUTPUT_5UTR = "targets/output_5utr/"
-TARGET_OUTPUT_3UTR = "targets/output_3utr/"
+TARGET_OUTPUT_5utr = "targets/output_5utr/"
+TARGET_OUTPUT_3utr = "targets/output_3utr/"
 OUTPUT_PDF = "pdf/"
 version = "_90_20"
 
@@ -42,8 +42,8 @@ rule combine_information:
     shell:
         """
         mkdir -p {TARGET_OUTPUT}
-        mkdir -p {TARGET_OUTPUT_5UTR}
-        mkdir -p {TARGET_OUTPUT_3UTR}
+        mkdir -p {TARGET_OUTPUT_5utr}
+        mkdir -p {TARGET_OUTPUT_3utr}
 
         python Integration/scripts/combine_information_{RUN_TYPE}.py \
             --dms_analysis_file {input.input_dms} \
@@ -52,8 +52,8 @@ rule combine_information:
             --summary {output.output_summary} \
             --exon_file {EXON_FILE} \
             --gff_path {gtf_file} \
-            --target_folder_5utr {TARGET_OUTPUT_5UTR} \
-            --target_folder_3utr {TARGET_OUTPUT_3UTR} \
+            --target_folder_5utr {TARGET_OUTPUT_5utr} \
+            --target_folder_3utr {TARGET_OUTPUT_3utr} \
             --model_path {model_path} \
             --eclip_path {ECLIP_PATH}
         """
@@ -72,20 +72,11 @@ rule run_varna:
     shell:
         """
         mkdir -p {TARGET_OUTPUT}
+        
         python Integration/scripts/run_varna.py \
-            --target_folder {TARGET_OUTPUT} \
-            --output_summary {output.output_file} \
-            --version 1
-
-        python Integration/scripts/run_varna.py \
-            --target_folder {TARGET_OUTPUT_5UTR} \
+            --target_folder {TARGET_OUTPUT_{RUN_TYPE}} \
             --output_summary {output.output_file2} \
-            --version 2
-
-        python Integration/scripts/run_varna.py \
-            --target_folder {TARGET_OUTPUT_3UTR} \
-            --output_summary {output.output_file3} \
-            --version 3
+            --version {RUN_VERSION}
         """
 
 
@@ -103,11 +94,10 @@ rule create_pdf:
         
         python Integration/scripts/create_pdf.py \
             --output_folder {TARGET_OUTPUT} \
-            --output_folder_3utr {TARGET_OUTPUT_3UTR} \
-            --output_folder_5utr {TARGET_OUTPUT_5UTR} \
             --dms_analysis_file {input.input_dms} \
             --output_pdf {output.output_pdf} \
-            --pdf_folder {OUTPUT_PDF}
+            --pdf_folder {OUTPUT_PDF} \
+            --run_type {RUN_TYPE}
             
         """
         
