@@ -15,6 +15,10 @@ provides the final integration fo the datasets
 - refseq dataset
 - hg382bit
 - ribonanzanet model
+- matching eClip dataset
 
 For convenience we also provide a refseq file and hg38.2bit here:
 https://drive.google.com/file/d/1FMUAAIMRE5GKaikTGa1R3B7qQsnHWs4T/view?usp=sharing
+
+An example for the eClip dataset can be found here:
+https://drive.google.com/file/d/1Qn9BWyIP4R4-jcJx0D-dekL5dFhQYdrm/view?usp=sharing

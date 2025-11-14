@@ -14,10 +14,10 @@ GLOBAL = {
     "gff_path": "refseq_with_start_codon",
     "genome": "hg38",
     "run_type": "3UTR",
-    "deseq_output": "OOPS3/deseq_output/",
-    "exons": "OOPS3/files/exons.bed",
+    "deseq_output": "deseq_output/",
+    "exons": "files/exons.bed",
     "model_path": "models/model_500_2_small.pt",
-    
+    "eclip": "eClip/",
 }
 
 PIPELINES = [

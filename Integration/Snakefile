@@ -11,10 +11,10 @@ SAMPLES = config["samples"].split(",")
 gtf_file = config["gff_path"]
 model_path = config["model_path"]
 DESEQ_OUTPUT = config["deseq_output"]
-INPUT_DATA = "targets/"
+INPUT_DATA = "profiles/"
 EXON_FILE = config["exons"]
 ECLIP_PATH = config["eclip"]
-RUN_TYPE = config["run_type"]
+RUN_TYPE = config["run_type"].lower()
 
 COVERAGE = "coverage/"
 TARGET = "targets/"
@@ -22,6 +22,7 @@ TARGET_OUTPUT = "targets/output/"
 TARGET_OUTPUT_5UTR = "targets/output_5utr/"
 TARGET_OUTPUT_3UTR = "targets/output_3utr/"
 OUTPUT_PDF = "pdf/"
+version = "_90_20"
 
 
 rule all:
@@ -33,8 +34,7 @@ rule all:
 
 rule combine_information:
     input:
-        input_dms = lambda wildcards: f"{INPUT_DATA}{wildcards.sample}/{wildcards.sample}.dms_coverage_all_{RUN_TYPE.lower()}.txt",
-        target_file = lambda wildcards: f"{TARGET}{wildcards.sample}.correlation_rnaplfold_oops_summary_target.txt",
+        input_dms = lambda wildcards: f"{INPUT_DATA}{wildcards.sample}/{wildcards.sample}.dms_coverage{version}.txt",
     output:
         output_summary = f"{TARGET}{{sample}}.combination_summary.txt",
     conda:
@@ -45,9 +45,8 @@ rule combine_information:
         mkdir -p {TARGET_OUTPUT_5UTR}
         mkdir -p {TARGET_OUTPUT_3UTR}
 
-        python Integration/scripts/combine_information_{RUN_TYPE.lower()}.py \
+        python Integration/scripts/combine_information_{RUN_TYPE}.py \
             --dms_analysis_file {input.input_dms} \
-            --target_file {input.target_file} \
             --target_folder {TARGET_OUTPUT} \
             --oops_seq_folder {DESEQ_OUTPUT} \
             --summary {output.output_summary} \
@@ -93,7 +92,7 @@ rule run_varna:
 rule create_pdf:
     input:
         summary = lambda wildcards: f"{TARGET}{{sample}}.varna_summary.txt",
-        input_dms = lambda wildcards: f"{INPUT_DATA}{wildcards.sample}/{wildcards.sample}.dms_coverage_all_{RUN_TYPE.lower()}.txt",
+        input_dms = lambda wildcards: f"{INPUT_DATA}{wildcards.sample}/{wildcards.sample}.dms_coverage{version}.txt",
     output:
         output_pdf = f"{OUTPUT_PDF}{{sample}}.pdf_summary.txt",
     conda:

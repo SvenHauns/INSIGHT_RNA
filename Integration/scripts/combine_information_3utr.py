@@ -541,10 +541,7 @@ def etract_refseq_utr(gff_path, run_type = "full"):
     last_tid = ""
     for enum, line in enumerate(hg_file):
         line_data = line.split()
-        
-        if counter%10000==0: print("counter: " + str(counter))
-            
-        
+
         if enum > 4:
             if line[0] == "#":continue
             if "transcript_id" not in line: print(line)
@@ -889,11 +886,6 @@ if __name__ == "__main__":
                                 help='input file',
                                 required = True,
                                 type=str)
-    cmdline_parser.add_argument('-t', '--target_file',
-                                default="",
-                                help='target file',
-                                required = True,
-                                type=str)
     cmdline_parser.add_argument('-g', '--target_folder',
                                 default="",
                                 help='target folder',
@@ -971,8 +963,6 @@ if __name__ == "__main__":
 
 
     utr5, utr3, gene_names = etract_refseq_utr(args.gff_path, run_type = "full")
-
-    targets = [t.split("\t")[-1] for t in open(args.target_file).readlines()]
     
     dms_file = open(args.dms_analysis_file).readlines()
     dms_targets_inds = [[d[1:-1], enum] for enum, d in enumerate(dms_file) if d[0] == ">"]
@@ -989,7 +979,7 @@ if __name__ == "__main__":
     created = []
 
     
-    model=RibonanzaNet(load_config_from_yaml("./scripts/pairwise.yaml")).cpu()
+    model=RibonanzaNet(load_config_from_yaml("./Integration/scripts/pairwise.yaml")).cpu()
     model.load_state_dict(torch.load(args.model_path,map_location='cpu'))
     
 
@@ -1002,14 +992,13 @@ if __name__ == "__main__":
     for target_z in dms_targets_inds:
         target = target_z[0]
         gene_name = gene_names[target]
-        if target.split("_")[0] == "XM" or target.split("_")[0] == "XP" or target.split("_")[0] == "XN": continue
-        print(target)
+        #if target.split("_")[0] == "XM" or target.split("_")[0] == "XP" or target.split("_")[0] == "XN": continue
         #    cont_ = False
         #if cont_: continue
         #### load normalization files
         
-        a_baseline_file = "./a_baseline"
-        c_baseline_file = "./c_baseline"
+        a_baseline_file = "Integration/a_baseline"
+        c_baseline_file = "Integration/c_baseline"
         with open(a_baseline_file,"rb") as f: 
             baseline = pickle.load(f)
         
@@ -1078,28 +1067,23 @@ if __name__ == "__main__":
         
         for region_selected in selected_region:
         
-            print(region_selected)
+
             regions = find_region(chr_eClip, region_selected, region_selected+40)
             
             if len(regions) == 0: continue
 
             for region in regions: 
 
-                #print(strandedness)
-                #ss_strand = strandedness[region[-1]] 
+
                 ss_strand = "single"
                 
-
-                
-
                 for exon_num, exon_range in enumerate(exons):
             
                     if (int(region[0]) >= int(exon_range.split("-")[0])) and (int(region[0]) < int(exon_range.split("-")[1])):
 
                         offset = int(region[0]) - int(exon_range.split("-")[0])
-                        print(offset)
                         offset2 = int(region_selected) - int(exon_range.split("-")[0])
-                        print(offset2)
+
 
                    
                         if exon_num>0:

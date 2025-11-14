@@ -476,9 +476,6 @@ def etract_refseq_utr(gff_path, run_type = "full"):
     for enum, line in enumerate(hg_file):
         line_data = line.split()
         
-        if counter%10000==0: print("counter: " + str(counter))
-            
-        
         if enum > 4:
             if line[0] == "#":continue
             if "transcript_id" not in line: print(line)
@@ -803,11 +800,6 @@ if __name__ == "__main__":
                                 help='input file',
                                 required = True,
                                 type=str)
-    cmdline_parser.add_argument('-t', '--target_file',
-                                default="",
-                                help='target file',
-                                required = True,
-                                type=str)
     cmdline_parser.add_argument('-g', '--target_folder',
                                 default="",
                                 help='target folder',
@@ -883,7 +875,6 @@ if __name__ == "__main__":
 
     utr5, utr3, gene_names = etract_refseq_utr(args.gff_path, run_type = "full")
 
-    targets = [t.split("\t")[-1] for t in open(args.target_file).readlines()]
     
     dms_file = open(args.dms_analysis_file).readlines()
     dms_targets_inds = [[d[1:-1], enum] for enum, d in enumerate(dms_file) if d[0] == ">"]
@@ -898,7 +889,7 @@ if __name__ == "__main__":
     created = []
 
     
-    model=RibonanzaNet(load_config_from_yaml("./scripts/pairwise.yaml")).cpu()
+    model=RibonanzaNet(load_config_from_yaml("./Integration/scripts/pairwise.yaml")).cpu()
     model.load_state_dict(torch.load(args.model_path,map_location='cpu'))
 
 
