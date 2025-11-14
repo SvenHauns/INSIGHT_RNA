@@ -583,15 +583,9 @@ def etract_refseq_utr(gff_path, run_type = "full"):
             if gen_type_ == "CDS":
                 haCDSs_dict[transcript_id] = True
             
-    
 
-    
-    
-    
-            
     hg_file.close()
 
-    #utr_regions = extract_utr_region(transcript_lists, exon_dict, start_dict, strand_dict)
     utr5_regions = extract_utr_region(transcript_lists, exon_dict, start_dict, strand_dict)
     utr3_regions = extract_3utr_region(transcript_lists, exon_dict, stop_dict, strand_dict)
 
@@ -984,9 +978,6 @@ if __name__ == "__main__":
     dms_targets_inds = [[d[1:-1], enum] for enum, d in enumerate(dms_file) if d[0] == ">"]
     dms_targets = [d[0] for d in dms_targets_inds]
 
-
-    
-    #dms_targets = ["NM_004047.5", "NM_181697.3", "NM_001428.5"]
     
     oops_seq_files = glob.glob(args.oops_seq_folder + "*")
 
@@ -1010,11 +1001,7 @@ if __name__ == "__main__":
     
     for target_z in dms_targets_inds:
         target = target_z[0]
-        print(target)
-        #if target != "XM_017001680.2":
         gene_name = gene_names[target]
-        #if test_count > 10: continue
-        #if target != "NM_001077198.3" and target != "NM_001101.5": continue
         if target.split("_")[0] == "XM" or target.split("_")[0] == "XP" or target.split("_")[0] == "XN": continue
         print(target)
         #    cont_ = False
@@ -1095,13 +1082,7 @@ if __name__ == "__main__":
             regions = find_region(chr_eClip, region_selected, region_selected+40)
             
             if len(regions) == 0: continue
-            print("REGIONS")
-            print(regions)
-            print(region_selected)
-            
-            
 
-            
             for region in regions: 
 
                 #print(strandedness)
@@ -1141,11 +1122,6 @@ if __name__ == "__main__":
                         
                         signal_fade_out_relevant_oops[offset2:offset2+40] = ["0" for _ in range(0,len(signal_fade_out[offset2:offset2+40]))]
                         
-                        print("end")
-                        print(offset2+40)
-                        
-                        print(offset+(region[1]-region[0]))
-                        
                         start = offset
                         end = offset+(region[1]-region[0])
                         to_append = region.copy()
@@ -1157,8 +1133,6 @@ if __name__ == "__main__":
         if found_regions == []: continue
         dms_prediction = get_model_prediction(model, seq)#
         
-        print(oops_seq_region)
-        print(found_regions)
 
 
         """           
@@ -1224,16 +1198,8 @@ if __name__ == "__main__":
         signal_fade_out_5utr = signal_fade_out[-len(seq):]
         signal_fade_out_relevant_oops_5utr = signal_fade_out_relevant_oops[-len(seq):]
         cov_5utr = cov[-len(seq):]
-        print(len(seq_5utr))
-        print(len(dms_5utr))
-        print(len(cov_5utr))
         enhance_signal = np.quantile(cov_5utr, 0.6)
-        print(len(dms_pred_5utr))
-        print(len(signal_fade_out_5utr))
-        print(len(signal_fade_out_relevant_oops_5utr))
 
-        
-        
         
         found_signal = False
         if "0" in signal_fade_out_5utr:
@@ -1251,7 +1217,6 @@ if __name__ == "__main__":
         eclip_info_file = open(args.target_folder_3utr + id_[1:-1] + "/" + "eclip_regions_3utr.txt", "w")
         for eClip_num, e_reg in enumerate(found_regions):
             
-            #if e_reg[-2] > utr5_len: continue
             if e_reg[-2] > len(seq): continue
             eclip_info_file.write(str(e_reg[0]))
             eclip_info_file.write(str("\t"))

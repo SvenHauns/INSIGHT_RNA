@@ -292,7 +292,6 @@ def extract_refseq_utr(gff_path, run_type="full"):
             if i <= 4 or line.startswith("#"):
                 continue
             if "transcript_id" not in line:
-                print(line)
                 continue
 
             fields = line.strip().split("\t")
@@ -614,9 +613,6 @@ if __name__ == '__main__':
                 chr_ =chr_dict[key]
                 
                 if chr_ == "chrMT": continue
-
-                if en % 1000 == 0: 
-                    print(en)
 
                 strand = strand_dict[key]
                 starts_sublists = [x[0] for x in utr_regions[key]]

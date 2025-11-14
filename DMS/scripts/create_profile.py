@@ -20,13 +20,10 @@ import os
 import pickle
 
 def count_mutation(stat_stable_dict, stat_changed_dict, r, read, exon_end, exon_start):
-
                 
     if r[1] < exon_end and r[1] >= exon_start:
                 
         forward_string = read.get_forward_sequence()
-             
-        
                      
         if read.is_reverse: forward_string = forward_string[::-1]                
         if r[2].islower() == False:
@@ -45,8 +42,6 @@ def count_mutation(stat_stable_dict, stat_changed_dict, r, read, exon_end, exon_
             else:
                 complement = r[2].upper()
 
-                        
-                        
             if complement != "N" and forward_string[r[0]] != "N":
                         
                 ke =  complement + "->" + forward_string[r[0]]
@@ -83,7 +78,6 @@ def create_plot(ax, data, title, biotype, exon_number):
     
 
     return
-
 
 
 def save_bed(chr_, start, end, strand, filename):
@@ -132,10 +126,6 @@ def rna_seq_mutation(chr_, exon_start, exon_end):
         mutated_list_forward[i] = []
         mutated_list_reverse[i] = []
                 
-                
-
-            
-            
             
     reads = bamfile.fetch(chr_, start = exon_start, stop = exon_end)
 
@@ -184,28 +174,14 @@ def rna_seq_mutation(chr_, exon_start, exon_end):
                              mutated_list_reverse[r[1]] = mutated_list_reverse[r[1]] + 1
                                  
                                  
-                                 
-
-                             
     full_data_forward_mutated = [0 if mutated_list_forward[x] == [] else mutated_list_forward[x] for x in range(exon_start, exon_end)]
     full_data_reverse_mutated = [0 if mutated_list_reverse[x] == [] else mutated_list_reverse[x] for x in range(exon_start, exon_end)]
     occupied_list = [0 if occupied_list[x] == [] else occupied_list[x] for x in range(exon_start, exon_end)]
 
-            
-            
     full_mutations = [d + full_data_reverse_mutated[enum] for enum, d in enumerate(full_data_forward_mutated)]
-        
-        
-    ############## LIMIT TO OCCUPATION #################
-        
-        
+                
     full_mutations = [x if occupied_list[en] >= 5 else 0 for en, x in enumerate(full_mutations)]
         
-
-        
-
-
-            
     return occupied_list, full_mutations
 
 
@@ -236,9 +212,6 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
 
     saved_gene = [0,0,0,0,0]
     saved_gene2 = [0,0,0,0,0]
-    
-
-
     
     bamfile = pysam.AlignmentFile(bamfile_path)
 
@@ -299,7 +272,6 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
         full_data_forward_reverse = []
         full_data_reverse_save = []
         
-        
         for ex_num, exon_start in enumerate(exon_starts):
             
 
@@ -310,9 +282,6 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
             mutated_list_forward = collections.defaultdict(list)
             mutated_list_reverse = collections.defaultdict(list)
             
-            
-
-
             for i in range(exon_start,exon_ends[ex_num]):
                 occupied_list[i] = []
                 mutated_list[i] = []
@@ -341,11 +310,6 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
                 
                 for r in read_pairs:
                 
-
-                    #if r[1] < exon_ends[ex_num] + 1 and r[1] >= exon_start:
-                    
-                    
-                    #if r[1] < exon_ends[ex_num] and r[1] >= exon_start -1:
                     
                     if r[1] < exon_ends[ex_num] and r[1] >= exon_start:
                     
@@ -388,29 +352,17 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
             full_data_forward_mutated = [0 if mutated_list_forward[x] == [] else mutated_list_forward[x] for x in range(exon_start, exon_ends[ex_num])]
             full_data_reverse_mutated = [0 if mutated_list_reverse[x] == [] else mutated_list_reverse[x] for x in range(exon_start, exon_ends[ex_num])]
 
-            
-            
-
             #full_data_reverse_mutated = [0 if full_data_reverse_mutated[x] > 100 else full_data_reverse_mutated[x] for x in range(0, len(full_data_reverse_mutated))]
             
-
-
             full_data_foward2 = [0 if occupied_list_forward[x] == [] else occupied_list_forward[x] for x in range(exon_start, exon_ends[ex_num])]
             full_data_reverse2 = [0 if occupied_list_reverse[x] == [] else occupied_list_reverse[x] for x in range(exon_start, exon_ends[ex_num])]
-            
-
             
             full_data_forward_mutated_not_normd = [m for enum, m in enumerate(full_data_forward_mutated)]
             full_data_forward_mutated = [m/max(full_data_foward2[enum],1) for enum, m in enumerate(full_data_forward_mutated)]
             
-
-            
             full_data_reverse_mutated_not_normd = [m for enum, m in enumerate(full_data_reverse_mutated)]
             full_data_reverse_mutated = [m/max(full_data_reverse2[enum],1) for enum, m in enumerate(full_data_reverse_mutated)]
             
-            
-
-
             
             for enum, data in enumerate(full_data_forward_mutated):
             #    if full_data_reverse_mutated[enum] != 0 and full_data_forward_mutated[enum]  != 0: raise NotImplementedError
@@ -419,21 +371,11 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
 
             full_data_mutated = full_data_forward_mutated
             
-            
-
-            
-
-
-            
             full_data = [0 if occupied_list[x] == [] else occupied_list[x] for x in range(exon_start, exon_ends[ex_num])]
             full_data_forward = [0 if occupied_list_forward[x] == [] else occupied_list_forward[x] for x in range(exon_start, exon_ends[ex_num])]
             full_data_reverse = [0 if occupied_list_reverse[x] == [] else occupied_list_reverse[x] for x in range(exon_start, exon_ends[ex_num])]
             
             full_data_mutated = [m  if full_data_forward[enum] > 0 or full_data_reverse[enum] >0 else "NA" for enum, m in enumerate(full_data_mutated)]
-            
-            
-            
-            
             
             full_data_both_mutated_not_normd_ = [full_data_reverse_mutated_not_normd[enum] + m for enum, m in enumerate(full_data_forward_mutated_not_normd)]
             
@@ -448,8 +390,6 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
             
             full_data_normd = norm_in_window(full_data_occupied_, full_data_both_mutated_not_normd_)
 
-
-
             #full_data_occupied_ = [x if x <=5 else 5 for x in full_data_occupied_]
             full_data_occupied_list.append(full_data_occupied_)
             full_data_both_mutated_normd.append(full_data_normd)
@@ -461,27 +401,17 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
             constraint_3 = calculate_constraint(full_data_normd, sequences, 0.25, ex_num, strand)
             constraint_4 = calculate_constraint(full_data_normd, sequences, 0.1, ex_num, strand)
             
-
-
-            
-            
             constraint_1_list.extend(constraint_1)
             constraint_2_list.extend(constraint_2)
             constraint_3_list.extend(constraint_3)
             constraint_4_list.extend(constraint_4)
             
             
-            
-        ######################## also try mean !
-
-
         normd_window_forward = full_data_both_mutated_normd
         window_forward = full_data_both_mutated_not_normd2_list
         
-        
         if strand == "-":
             
-
             for norm2 in window_forward:
                 norm2.reverse()
         
@@ -492,26 +422,19 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
             #normd_window_forward.reverse()
             for occ in full_data_occupied_list:
                 occ.reverse()
-                
-
             
         normd_window_forward2,full_data_occupied_list2, window_forward2 = [], [], []
         for m in normd_window_forward: normd_window_forward2.extend(m)
         for m in full_data_occupied_list:full_data_occupied_list2.extend(m)
         for m in window_forward:window_forward2.extend(m)
         
-        
         normd_window_forward = normd_window_forward2
         full_data_occupied_list = full_data_occupied_list2
         window_forward = window_forward2
 
 
-
-
     bamfile.close()
-    
-    
-    
+        
     ############################# write dms to fasta file ###########################################
     
 
@@ -708,118 +631,8 @@ def create_fig(sequences, normd_windows, coverage, name_, strand, save_path):
         
 
     return
-    
-    
-def create_multiple(sequences, normd_windows, coverage, name_, strand):
-
-    
-    x_list = ""
-    for seq in sequences:
-        x_list = x_list + seq
-           
-    color = []
-    x_list_ = []
-    for enum, x_ in enumerate(x_list):
-            
-        if x_ == "C":
-            color.append("blue")
-        elif x_ == "G":
-            color.append("yellow")
-        elif x_ == "T":
-            color.append("grey")
-        elif x_ == "A":
-            color.append("red")
-        x_list_.append(x_)
-                
-    x_list = x_list_
-    
-    
 
 
-    
-    
-    
-    tiltes = ["1lbeta-treated","untreated","RNA seq"]
-    
-    fig, axes = plt.subplots(20, 3, sharey=False, figsize = (30, 5))
-    
-    
-    
-    
-    for en, normd_windows in enumerate(normd_windows_list):
-    
-    
-        iterate_axis(axes[en], normd_windows, tiltes, color)
-        
-        
-    
-    for enum, window in enumerate(normd_windows):
-            
-        axes[enum].bar(range(0, len(x_list)), window, color = color)
-        axes[enum].set_xticks(range(0, len(x_list)))
-        axes[enum].set_xticklabels(x_list, fontsize = 6)
-
-
-        axes[enum].set_title(tiltes[enum])           
-
-        axes[enum].set_ylabel('DMS signal')           
-        axes[enum].set_ylim(bottom=0, top=0.35)        
-        
-        ax_twin = axes[enum].twinx()
-        ax_twin.plot(coverage[enum], color='green', linewidth=5)
-        ax_twin.grid(None)
-        ax_twin.set_ylabel('coverage')
-        ax_twin.set_ylim(0, 5)
-        ax_twin.tick_params(axis = "y", labelsize = 6)
-        axes[enum].tick_params(axis = "y", labelsize = 6)
-        
-        labels = ["A", "C", "G", "T", "coverage"]
-        colors = ["red", "blue", "yellow", "grey", "green"]
-            
-        handles = [plt.Rectangle((0,0),1,1, color=colors[en]) for en,label in enumerate(labels)]
-        axes[enum].legend(handles, labels)
-        
-        
-    fig.suptitle(name_)
-
-
-
-    return
-    
-    
-def iterate_axis(axes, normd_windows, tiltes, color):
-
-
-    for enum, window in enumerate(normd_windows):
-            
-        axes[enum].bar(range(0, len(x_list)), window, color = color)
-        axes[enum].set_xticks(range(0, len(x_list)))
-        axes[enum].set_xticklabels(x_list, fontsize = 6)
-
-
-        axes[enum].set_title(tiltes[enum])           
-
-        axes[enum].set_ylabel('DMS signal')           
-        axes[enum].set_ylim(bottom=0, top=0.35)        
-        
-        ax_twin = axes[enum].twinx()
-        ax_twin.plot(coverage[enum], color='green', linewidth=5)
-        ax_twin.grid(None)
-        ax_twin.set_ylabel('coverage')
-        ax_twin.set_ylim(0, 5)
-        ax_twin.tick_params(axis = "y", labelsize = 6)
-        axes[enum].tick_params(axis = "y", labelsize = 6)
-        
-        labels = ["A", "C", "G", "T", "coverage"]
-        colors = ["red", "blue", "yellow", "grey", "green"]
-            
-        handles = [plt.Rectangle((0,0),1,1, color=colors[en]) for en,label in enumerate(labels)]
-        axes[enum].legend(handles, labels)
-        
-
-    return
-    
-    
     
 def save_dms(chr_, exon_start,exon_end, dms_data, file_name):
 
@@ -835,14 +648,10 @@ def save_dms(chr_, exon_start,exon_end, dms_data, file_name):
                 
     file_.write("\n")
     file_.close()
-    
 
     return
     
-    
-    
-    
-    
+        
 def save_conjunction(file_name, in_list):
 
     file_ =  open(file_name, "a+")
@@ -854,12 +663,7 @@ def save_conjunction(file_name, in_list):
                 
     file_.close()
     
-
     return
-    
-    
-    
-    
     
     
 def coverage_metric_check(exon_list):
@@ -926,11 +730,7 @@ def coverage_metric_check(exon_list):
          a80_full_coverage_2 = False
     
     return a95_full_coverage_5, a90_full_coverage_5, a95_full_coverage_2, a90_full_coverage_2, a80_full_coverage_2
-    
-    
-    
-    
-    
+        
     
 def coverage_metric(avg_list):
 
@@ -974,8 +774,6 @@ def coverage_metric(avg_list):
                 smaller_5 = smaller_5 + 1
             if val < 2:
                 smaller_2 = smaller_2 + 1
-                
-                
                 
                 
         if smaller_10/len(l) >= 0.02:
@@ -1024,12 +822,7 @@ def coverage_metric(avg_list):
         else:
              ten_coverage[2].append(1)
              
-
-
     return full_coverage, two_coverage, five_coverage, ten_coverage
-    
-    
-    
     
     
 def uniques(ind_list, chr_list, name_list):
@@ -1046,27 +839,18 @@ def uniques(ind_list, chr_list, name_list):
             new_ind_list.append(val)
             new_chr_list.append(chr_list[enum])
             new_name_list.append(name_list[enum])
-    
-
 
     return new_ind_list, new_chr_list, new_name_list
 
 
-
-    
     
 def calculate_constraint(dms_values_in, sequences, threshold, ex_num, strand):
      
-
-
     dms_values =dms_values_in.copy()
     sequence = sequences[ex_num]
     
-    
     if strand == "-":
         dms_values.reverse()
-
-
 
     constraint = ""
 
@@ -1098,19 +882,13 @@ if __name__ == '__main__':
     parser.add_argument("--changed_dict", type=str, required=True, help="changed dictionary")
     # Parse arguments
     args = parser.parse_args()
-    
-    print(args)
-
-
 
     files_ = open(args.coverage_list).readlines()
     transcript_id_list = []
     chr_list = []
     starts = []
     ends = []
-    
 
-    
     if files_ == []:
         open(args.output_file, "w")
     
@@ -1133,8 +911,6 @@ if __name__ == '__main__':
         starts.append([start_val])
         ends.append([end_val])
         
-
-    
     version_counter = 2
     prev = "None"
     for en, x in enumerate(transcript_id_list):
@@ -1147,15 +923,12 @@ if __name__ == '__main__':
         prev = x
                 
     ind_ = 1
-    
-
     ############################ read in proteins #########################################################
     
     sequences = []
     for record in SeqIO.parse(args.extracted_sequences, "fasta"):
          sequences.append(str(record.seq))
          
-
     seq_sub_list = []
     iterator = 0
     for enum, sub in enumerate(starts):
@@ -1177,13 +950,9 @@ if __name__ == '__main__':
          for en, seq in enumerate(subs):
              subs[en] = seq.upper()
          
-         
-         
-
          iterator = iterator + lenght_counter
          seq_sub_list.append(subs)
          
-
     strands = []
     
     
@@ -1219,8 +988,6 @@ if __name__ == '__main__':
     seq_sub_list = seq_sub_list[ind_-1:]
     
     
-    
-    
     run_from = False
     start_en = None
     
@@ -1230,7 +997,6 @@ if __name__ == '__main__':
                        "G->A": 0, "G->T": 0, "G->C": 0, 
                         "T->A": 0, "T->C": 0, "T->G": 0}
 
-    
     for flag in flags:
     
         iterator = 10

@@ -740,8 +740,6 @@ def load_dataset(datafile, length_limit = 850, length_min = 100):
             if len(file_[enum+1][:-1]) < length_min: continue
             dataset.append([line_[:-1],file_[enum+1][:-1], file_[enum+2][:-1]])
 
-
-
     return dataset
 
 
@@ -752,7 +750,6 @@ def load_eClip_data(paths_to_data):
     "chr22":[], "chrX":[], "chrY":[], "chrM": []}
 
 
-    
     for path_to_data in glob.glob(paths_to_data + "/*"):
         folders = glob.glob(path_to_data + "/*")
     
@@ -810,8 +807,6 @@ def load_motif_data():
 
     return
     
-    
-
 class RNA_Dataset2(torch.utils.data.Dataset):
     def __init__(self,data):
         self.data=data
@@ -881,9 +876,6 @@ def find_region(eClip_list, start, end):
                 detected_region.append(eclip)
 
     return detected_region
-
-
-
 
 
 if __name__ == "__main__":
@@ -977,8 +969,6 @@ if __name__ == "__main__":
      "PCBP1": "single"}
 
 
-     #"PRPF4": "double",
-    # "EXOSC5": "double",
     utr5, utr3, gene_names = etract_refseq_utr(args.gff_path, run_type = "full")
 
     targets = [t.split("\t")[-1] for t in open(args.target_file).readlines()]
@@ -987,10 +977,6 @@ if __name__ == "__main__":
     dms_targets_inds = [[d[1:-1], enum] for enum, d in enumerate(dms_file) if d[0] == ">"]
     dms_targets = [d[0] for d in dms_targets_inds]
 
-
-    
-    #dms_targets = ["NM_004047.5", "NM_181697.3", "NM_001428.5"]
-    
     oops_seq_files = glob.glob(args.oops_seq_folder + "*")
 
     
@@ -1000,12 +986,8 @@ if __name__ == "__main__":
 
     created = []
 
-    
     model=RibonanzaNet(load_config_from_yaml("./scripts/pairwise.yaml")).cpu()
     model.load_state_dict(torch.load(args.model_path,map_location='cpu'))
-    
-
-
 
     cont_ = True
     
@@ -1014,19 +996,12 @@ if __name__ == "__main__":
     for target_z in dms_targets_inds:
         target = target_z[0]
 
-        #if target != "XM_017001680.2":
         gene_name = gene_names[target]
-        #if test_count > 10: continue
-
-        #    cont_ = False
-        #if cont_: continue
-        #if target != "XM_017001680.2":
         #if "/mnt/StrucIntegration/Integration/targets/output_5utr/" + target in glob.glob("mnt/StrucIntegration/Integration/targets/output_5utr/*"):continue
         if target != "NM_001077198.3" and target != "NM_001101.5": continue
         if target.split("_")[0] == "XM" or target.split("_")[0] == "XP" or target.split("_")[0] == "XN": continue
         print(target)
-        
-        
+
         #### load normalization files
         
         a_baseline_file = "./a_baseline"
@@ -1038,10 +1013,6 @@ if __name__ == "__main__":
             c_baseline = pickle.load(f)
         
         baseline.update(c_baseline)
-        
-        print(baseline)
-        
-
 
         ind = dms_targets.index(target)
         id_ = dms_file[dms_targets_inds[ind][1]]
@@ -1052,19 +1023,12 @@ if __name__ == "__main__":
         dms_raw_signal = [int(c)/cov[enum] if cov[enum] >20 else 0 for enum, c in enumerate(dms_counts)]
         
         dms = (dms - dms.min()) / (dms.max() - dms.min())
-        print(seq)
-        print(dms_raw_signal)
-        
+
         inds = [enum for enum, c in enumerate(dms_raw_signal) if c > 0.06 ]
         
-        print(np.array(dms_raw_signal)[inds])
-        
-
-            
 
         dms_raw_signal = [c/baseline[seq[max(0,enum-1):min(enum+2, len(seq))]] if seq[enum] == "A" or seq[enum] == "C" else 0 for enum, c in enumerate(dms_raw_signal)]
-        print(dms_raw_signal)
-        print(np.array(dms_raw_signal)[inds])
+
 
         if len(seq) > 1500: continue
 
@@ -1096,24 +1060,16 @@ if __name__ == "__main__":
         #selected_region = [r for enum, r in enumerate(regions) if mean[enum] >= 50 and padj_val[enum] > 0.05] # select-non significant regions for analysis
         
         if len(selected_region) == 0: continue
-        
         exons = sorted(exon_dict[id_[1:-1]], key=lambda l:int(l.split("-")[0]))
-            
         lengths = [int(e.split("-")[1]) - int(e.split("-")[0]) for e in exons]
-
         chr_ = dict_[id_[1:-1]]
-
         chr_eClip = eClip_dict[chr_]
-
 
         
         found_regions = []
-            
         signal_fade_out = ["1" for _ in range(len(seq))]
         signal_fade_out_relevant_oops = ["1" for _ in range(len(seq))]
-        
         selected_eclips = []
-        
         oops_seq_region = []
         
         for region_selected in selected_region:
@@ -1123,14 +1079,9 @@ if __name__ == "__main__":
             
             if len(regions) == 0: continue
 
-            
-            
-
-            
             for region in regions: 
 
-                #print(strandedness)
-                #ss_strand = strandedness[region[-1]] 
+
                 ss_strand = "single"
                 
 
@@ -1317,7 +1268,6 @@ if __name__ == "__main__":
         info_file.close()
         """
         ML only and ML + DMS !
-        
         
         RNAfold("RNAfold", input_fasta, shape_file=None, target_file = target_folder + "plain", id_ = id_[1:-1])
         RNAfold("RNAfold", input_fasta, shape_file1, target_file = target_folder + "dms", id_ = id_[1:-1])

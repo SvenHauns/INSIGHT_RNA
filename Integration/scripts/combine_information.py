@@ -366,7 +366,6 @@ def create_shape_file_constraint(id_, seq, dms, dms_predicted, coverage, oops_si
     return
 
 
-
 def create_shape_file(id_, seq, dms, dms_predicted, coverage, oops_signal, shape_file1, shape_file2, shape_file3, shape_file4, shape_file5, input_fasta):
 
     input_fasta = open(input_fasta, "w")
@@ -518,11 +517,6 @@ def etract_refseq_utr(gff_path, run_type = "full"):
             if gen_type_ == "CDS":
                 haCDSs_dict[transcript_id] = True
             
-    
-
-    
-    
-    
             
     hg_file.close()
 
@@ -862,13 +856,7 @@ if __name__ == "__main__":
 
 
     args, unknowns = cmdline_parser.parse_known_args()
-    print(args.target_file)
-    print(open(args.target_file).readlines())
-    
     eClip_dict = load_eClip_data(args.eclip_path)
-    
-    print(eClip_dict)
-    
     
     strandedness = {"AKAP1": "single", 
     "AQR": "unknown",
@@ -900,56 +888,32 @@ if __name__ == "__main__":
     dms_file = open(args.dms_analysis_file).readlines()
     dms_targets_inds = [[d[1:-1], enum] for enum, d in enumerate(dms_file) if d[0] == ">"]
     dms_targets = [d[0] for d in dms_targets_inds]
-    print(len(dms_targets))
-    print(len(dms_targets_inds))
-
-    
-    #dms_targets = ["NM_004047.5", "NM_181697.3", "NM_001428.5"]
     
     oops_seq_files = glob.glob(args.oops_seq_folder + "*")
-    print("oops_seq_files")
-    print(oops_seq_files)
+
     
     oops_seq_folder_ids = [o.split("|")[0].split("/")[-1] for o in oops_seq_files]
     dict_, exon_dict = get_exons(args.exon_file)
-    
-    print(args.target_file)
 
-
-    print(len(oops_seq_folder_ids))
-    print("start")
     created = []
 
     
     model=RibonanzaNet(load_config_from_yaml("./scripts/pairwise.yaml")).cpu()
     model.load_state_dict(torch.load(args.model_path,map_location='cpu'))
-    
-    print("targets")
-    print(dms_targets_inds)
-    print("t")
-    print(args.oops_seq_folder)
+
 
 
 
 
     cont_ = True
     
-    print("iterate")
-    print(dms_targets_inds)
+
     test_count = 0
     
     for target_z in dms_targets_inds:
         target = target_z[0]
-        print(target)
-        #if target != "XM_017001680.2":
         gene_name = gene_names[target]
         if test_count > 2: continue
-
-            
-        #    cont_ = False
-        #if cont_: continue
-        print("here")
-        print(oops_seq_folder_ids)
 
         ind = dms_targets.index(target)
         id_ = dms_file[dms_targets_inds[ind][1]]
@@ -961,16 +925,11 @@ if __name__ == "__main__":
         
         dms = (dms - dms.min()) / (dms.max() - dms.min())
 
-
-
-            
-            
         oops_search = target
 
         utr5_len = utr5[target]
         utr3_len = utr3[target]
         
-
 
         if oops_search not in oops_seq_folder_ids: continue
         oops_data = oops_seq_files[oops_seq_folder_ids.index(oops_search)]
@@ -1012,15 +971,11 @@ if __name__ == "__main__":
             regions = find_region(chr_eClip, region_selected, region_selected+40)
             
             if len(regions) == 0: continue
-            print(regions)
+
             
             for region in regions: 
-                print(region)
-                
+
                 ss_strand = strandedness[region[-1]] 
-                
-                print(ss_strand)
-                
 
                 for exon_num, exon_range in enumerate(exons):
             
@@ -1105,9 +1060,6 @@ if __name__ == "__main__":
         
         create_shape_file_constraint(id_, seq, dms_raw_signal, dms_prediction, cov, signal_fade_out, shape_file1, shape_file2, shape_file3, shape_file4, shape_file5, input_fasta)
         
-
-
-                           
                            
         target_folder = args.target_folder + id_[1:-1]   + "/"
         if os.path.isdir(target_folder) == False: os.mkdir(target_folder)
@@ -1116,9 +1068,6 @@ if __name__ == "__main__":
         info_file.write(str(" ".join([str(d) for d in dms_raw_signal])))
         info_file.write("\n")
 
-        
-        print(signal_fade_out)
-        
         info_file.write(str(" ".join([str(s) for s in signal_fade_out])))
         info_file.write("\n")
         info_file.write(str(" ".join([str(d.item()) for d in dms_prediction])))
@@ -1328,10 +1277,6 @@ if __name__ == "__main__":
         created.append(id_)
         test_count = test_count + 1
         
-
-
-
-
 
     summary = open(args.summary, "w")
     summary.write("".join(id_))

@@ -16,6 +16,7 @@ GLOBAL = {
     "run_type": "3UTR",
     "deseq_output": "OOPS3/deseq_output/",
     "exons": "OOPS3/files/exons.bed",
+    "model_path": "models/model_500_2_small.pt",
     
 }
 
