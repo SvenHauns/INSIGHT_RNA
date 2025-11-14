@@ -90,7 +90,7 @@ def main():
     parser.add_argument("--cl_samples_oops", type=str, default=None, help="samples to process")
     parser.add_argument("--samples", type=str, default=None, help="samples to process")
     parser.add_argument("--run_type", type=str, default=None, help="DMS run type, 3UTR, 5UTR")
-    
+    parser.add_argument("--model_path", type=str, default=None, help="path to RibonanzaNet model")
     
     args = parser.parse_args()
     
@@ -99,6 +99,7 @@ def main():
     if args.samples_oops != None: GLOBAL["cl"] = args.cl_samples_oops
     if args.samples != None: GLOBAL["samples"] = args.samples
     if args.run_type != None: GLOBAL["run_type"] = args.run_type
+    if args.model_path != None: GLOBAL["model_path"] = args.model_path
     
     
     for p in PIPELINES:
