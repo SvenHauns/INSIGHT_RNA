@@ -8,22 +8,16 @@ import pickle
 
 def run_varna(sequence, structure, output, highlight_region, dms_color_map, oops_seq_region, annotation_command):
 
-	print("oops_seq_region")
-	print(oops_seq_region)
-	print("highlight_region")
-	print(highlight_region)
-	print(annotation_command)
-	
 	if highlight_region != []:
 
-	    cmd = 'java -Djava.awt.headless=true -Djava.io.tmpdir=/mnt/tmp/ -cp VARNAv3-93.jar fr.orsay.lri.varna.applications.VARNAcmd -sequenceDBN "{sequnence}" -structureDBN "{structure}" -resolution 35.0  -exportFormat svg  -o {output} -auxBPs "0.6:type=B,anchor=7,size=5,color=#00FF00" -colorMapStyle "0:#FFFFFF;1:#FF0000"  -colorMapMin 0.0 -colorMapMax 0.2 -colorMap "{dms_color_map}" -highlightRegion {highlight_region}'
+	    cmd = 'java -Djava.awt.headless=true -Djava.io.tmpdir=/mnt/tmp/ -cp VARNAv3-93.jar fr.orsay.lri.varna.applications.VARNAcmd -sequenceDBN "{sequnence}" -structureDBN "{structure}" -resolution 35.0  -exportFormat png  -o {output} -auxBPs "0.6:type=B,anchor=7,size=5,color=#00FF00" -colorMapStyle "0:#FFFFFF;1:#FF0000"  -colorMapMin 0.0 -colorMapMax 0.2 -colorMap "{dms_color_map}" -highlightRegion {highlight_region}'
 	    
 	    if dms_color_map == "":
 	    
 	        cmd = 'java -Djava.awt.headless=true -cp VARNAv3-93.jar fr.orsay.lri.varna.applications.VARNAcmd \
 -sequenceDBN "{sequnence}" \
 -structureDBN "{structure}" \
--exportFormat svg \
+-exportFormat png \
 -o {output} \
 -resolution 35.0 \
 -highlightRegion "{highlight_region}" \
@@ -41,7 +35,7 @@ def run_varna(sequence, structure, output, highlight_region, dms_color_map, oops
 	            cmd = 'java -Djava.awt.headless=true -cp VARNAv3-93.jar fr.orsay.lri.varna.applications.VARNAcmd \
 -sequenceDBN "{sequnence}" \
 -structureDBN "{structure}" \
--exportFormat svg \
+-exportFormat png \
 -resolution 35.0 \
 -o {output} \
 -highlightRegion "{highlight_region}" \
@@ -55,7 +49,7 @@ def run_varna(sequence, structure, output, highlight_region, dms_color_map, oops
 	            cmd = 'java -Djava.awt.headless=true -cp VARNAv3-93.jar fr.orsay.lri.varna.applications.VARNAcmd \
 -sequenceDBN "{sequnence}" \
 -structureDBN "{structure}" \
--exportFormat svg \
+-exportFormat png \
 -resolution 35.0 \
 -o {output} \
 -highlightRegion "{highlight_region}" \
@@ -73,7 +67,7 @@ def run_varna(sequence, structure, output, highlight_region, dms_color_map, oops
 	        cmd = 'java -Djava.awt.headless=true -cp VARNAv3-93.jar fr.orsay.lri.varna.applications.VARNAcmd \
 -sequenceDBN "{sequnence}" \
 -structureDBN "{structure}" \
--exportFormat svg \
+-exportFormat png \
 -resolution 35.0 \
 -o {output} \
 -applyBasesStyle1on "{dms_color_map}" -basesStyle1 "fill=#FF1000,outline=#000000,label=#000000" -flat true'
@@ -83,7 +77,7 @@ def run_varna(sequence, structure, output, highlight_region, dms_color_map, oops
 	        cmd = 'java -Djava.awt.headless=true -cp VARNAv3-93.jar fr.orsay.lri.varna.applications.VARNAcmd \
 -sequenceDBN "{sequnence}" \
 -structureDBN "{structure}" \
--exportFormat svg \
+-exportFormat png \
 -resolution 35.0 \
 -o {output} \
  -basesStyle1 "fill=#FF1000,outline=#000000,label=#000000" -flat true'
@@ -128,12 +122,12 @@ if __name__ == "__main__":
     
     append = ""
     if args.version == 2:
-         append = "_5utr"
-    elif args.version == 3:
          append = "_3utr"
+    elif args.version == 3:
+         append = "_5utr"
 
 
-        
+    
     for folder in target_folder:
     
         folder_files = glob.glob(folder + "/*log*")
@@ -150,7 +144,7 @@ if __name__ == "__main__":
 
             struc = log_file[2][:-1].split(" ")[0]
 
-            output_file = log_file_name.split(".log")[0] + "_varna.svg"
+            output_file = log_file_name.split(".log")[0] + "_varna.png"
             info_file = open(folder  + "/complete_info" + str(append) + ".txt").readlines()
             coverage = [int(f) for f in info_file[-1].split(" ")]
             enhance_signal = np.quantile(coverage, 0.6)
@@ -221,7 +215,7 @@ if __name__ == "__main__":
             else : high_lights_str = high_lights
 
 
-            if args.version == 2: eclip_info_file = open(folder  + "/" + "eclip_regions_5utr.txt").readlines()
+            if args.version == 3: eclip_info_file = open(folder  + "/" + "eclip_regions_5utr.txt").readlines()
             else: eclip_info_file = open(folder  + "/" + "eclip_regions_3utr.txt").readlines()
 
             varna_files_created.append(output_file)
@@ -236,7 +230,7 @@ if __name__ == "__main__":
             for line in eclip_info_file:
                 new_name = line.split("\t")[3]
                 anchor = int(line.split("\t")[5])
-                print(anchor)
+
 
                 if anchor > last_anchor + 5:
                     if name != None: annotation_command += f"{name}:type=B,anchor={last_anchor},angle=0,size=12,color=#000000;"

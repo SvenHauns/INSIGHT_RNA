@@ -24,6 +24,12 @@ TARGET_OUTPUT_3utr = "targets/output_3utr/"
 OUTPUT_PDF = "pdf/"
 version = "_90_20"
 
+if RUN_VERSION == 2:
+    TARGET_FOLDER_OUTPUT = TARGET_OUTPUT_3utr
+else:
+    TARGET_FOLDER_OUTPUT = TARGET_OUTPUT_5utr
+    
+    
 
 rule all:
     input:
@@ -65,8 +71,6 @@ rule run_varna:
         summary = lambda wildcards: f"{TARGET}{{sample}}.combination_summary.txt",
     output:
         output_file = f"{TARGET}{{sample}}.varna_summary.txt",
-        output_file2 = f"{TARGET}{{sample}}.varna_summary_5utr.txt",
-        output_file3 = f"{TARGET}{{sample}}.varna_summary_3utr.txt",
     conda:
         "envs/java.yaml"
     shell:
@@ -74,8 +78,8 @@ rule run_varna:
         mkdir -p {TARGET_OUTPUT}
         
         python Integration/scripts/run_varna.py \
-            --target_folder {TARGET_OUTPUT_{RUN_TYPE}} \
-            --output_summary {output.output_file2} \
+            --target_folder {TARGET_FOLDER_OUTPUT} \
+            --output_summary {output.output_file} \
             --version {RUN_VERSION}
         """
 
@@ -93,7 +97,7 @@ rule create_pdf:
         mkdir -p {OUTPUT_PDF}
         
         python Integration/scripts/create_pdf.py \
-            --output_folder {TARGET_OUTPUT} \
+            --output_folder {TARGET_FOLDER_OUTPUT} \
             --dms_analysis_file {input.input_dms} \
             --output_pdf {output.output_pdf} \
             --pdf_folder {OUTPUT_PDF} \

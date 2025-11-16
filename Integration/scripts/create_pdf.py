@@ -3,7 +3,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 import math
-from pypdf import PdfMerger, PdfWriter
+from pypdf import PdfWriter
 import argparse
 import glob
 from PIL import Image, ImageDraw, ImageFont
@@ -796,9 +796,7 @@ if __name__ == "__main__":
                                 
                                 
     args, unknowns = cmdline_parser.parse_known_args()
-    
-    
-    ## read png images
+
     PAPERLESS_OCR_MAX_IMAGE_PIXELS=40000000000
     dms_file_open = open(args.dms_analysis_file).readlines()
     dms_dict = {}
@@ -809,7 +807,6 @@ if __name__ == "__main__":
     
     
     folders = glob.glob(args.output_folder + "/*")
-    
     
     for folder in folders:
     

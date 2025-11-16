@@ -981,21 +981,13 @@ if __name__ == "__main__":
     
     model=RibonanzaNet(load_config_from_yaml("./Integration/scripts/pairwise.yaml")).cpu()
     model.load_state_dict(torch.load(args.model_path,map_location='cpu'))
-    
-
-
 
     cont_ = True
-    
     test_count = 0
     
     for target_z in dms_targets_inds:
         target = target_z[0]
         gene_name = gene_names[target]
-        #if target.split("_")[0] == "XM" or target.split("_")[0] == "XP" or target.split("_")[0] == "XN": continue
-        #    cont_ = False
-        #if cont_: continue
-        #### load normalization files
         
         a_baseline_file = "Integration/a_baseline"
         c_baseline_file = "Integration/c_baseline"
@@ -1288,6 +1280,8 @@ if __name__ == "__main__":
         os.remove(input_fasta)
         
         test_count = test_count + 1
+        
+        
 
 
 
