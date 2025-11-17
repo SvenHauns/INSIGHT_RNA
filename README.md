@@ -1,19 +1,19 @@
 # InsightRNA
 This snakemake pipeline processes DMS and OOPS-seq files and integrates information about secondary structure into a a single structural profile.
 
-# OOPS
+## OOPS
 provides the snakemake pipeline to process OOPS-seq data
 
-# DMS
+## DMS
 provides the snakemake pipeline to process DMS based data
 
-# Integration
+## Integration
 provides the final integration fo the datasets
 
-# RibonanzaNet
+## RibonanzaNet
 provides the functions to create a finetuned version of RibonanzaNet. For details please refer to: https://github.com/Shujun-He/RibonanzaNet
 
-## requirements
+### requirements
 - refseq dataset
 - hg382bit
 - ribonanzanet model
