@@ -250,9 +250,6 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
     constraint_3_list = []
     constraint_4_list = []
     
-    print("exon_starts")
-    print(starts)
-    
 
     for enum, exon_starts in enumerate(starts):
     
@@ -461,9 +458,7 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
     raw_data_dms = ""
     for dms in window_forward:
         raw_data_dms = raw_data_dms + str(dms) + " "
-    print("writing")
-    print(output_file)
-    print(name_)
+
     file_ = open(output_file, "a")
     file_.write(">")
     file_.write(name_)
@@ -477,8 +472,6 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
     file_.write(str(coverage_save))
     file_.write("\n")
     file_.close()
-    
-    print("DONE")
     
 
         
@@ -503,8 +496,7 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
     path = "/".join(output_file.split("/")[:-1])
     path_folder = path + "/" + "dms_0.04/"
     
-    print("path")
-    print(path)
+
     if os.path.isdir(path_folder) == False: os.mkdir(path_folder)
     
     file_ = open(path_folder + output_file.split(".txt")[0].split("/")[-1] + "_" + name_ + "_0.04.txt", "a")
@@ -555,9 +547,6 @@ def analysis_normd2(starts, ends, chr_, strand, name_, values, values2, coverage
     file_.write(str(constraint_list3))
     file_.write("\n")
     file_.close()
-
-
-    print("DONE: " + str(name_))
             
     return normd_window_forward, full_data_occupied_list, sequences, name_,stat_stable_dict, stat_changed_dict
     
@@ -923,7 +912,6 @@ if __name__ == '__main__':
         prev = x
                 
     ind_ = 1
-    ############################ read in proteins #########################################################
     
     sequences = []
     for record in SeqIO.parse(args.extracted_sequences, "fasta"):
@@ -1008,10 +996,8 @@ if __name__ == '__main__':
         values2 = [0,0,0,0,0]
         coverage2 = [[],[],[],[], []]    
 
-        #bam_file_list = ["./data/DMS_1lb.bam", "./data/DMS.bam", "./data/RNA-NOIL-3.bam"]
         bam_file_list = [args.bam_file]
-        is_rna_list = [True, True, True]
-        #Galaxy91-[Samtools_view_on_data_89__filtered_alignments].bam
+        is_rna_list = [True]
         
         cont = True     
         for en, chr_ in enumerate(chr_list):
@@ -1032,7 +1018,6 @@ if __name__ == '__main__':
 
                     elif strand_sub[en][0] == "-":
             
-                        #ends[en][enum][ex_num] = ends[en][enum][ex_num] + 1
                         starts[en][enum][ex_num] = starts[en][enum][ex_num] -1
                     else:
         
@@ -1040,21 +1025,10 @@ if __name__ == '__main__':
    
             
             for bam_num, bam_file in enumerate(bam_file_list):
-                print(args.output_file)
-                print(args.output_file)
-                print(args.output_file)
-                print(args.output_file)
-                print(args.output_file)
-                print(args.output_file)
-                print(args.output_file)
-                print(args.output_file)
                 
                 normd_window, full_data_occupied_list, sequence, name_, stat_stable_dict, stat_changed_dict= analysis_normd2(starts[en], ends[en], chr_, strand_sub[en][0] ,transcript_id_list[en],values1, values2,coverage1, coverage2, flag, seq_sub_list[en], bam_file, is_rna = is_rna_list[bam_num], bam_num = bam_num, save_path = args.save_path, output_file = args.output_file, stat_stable_dict = stat_stable_dict, stat_changed_dict = stat_changed_dict)
                 normd_windows_for_bam.append(normd_window)
                 coverage_bam_list.append(full_data_occupied_list)
-                
-                print(stat_stable_dict)
-                print(stat_changed_dict)
                 
             #create_fig(sequence, normd_windows_for_bam, coverage_bam_list,  name_, strand_sub[en][0], args.save_path)
             
