@@ -1,0 +1,21 @@
+{
+  "samples": "Preprocessing/samples.hek293.tsv",
+  "genome_fasta": "/path/to/GRCh38.primary_assembly.genome.fa",
+  "annotation_gtf": "/path/to/matching.annotation.gtf",
+  "output": "Preprocessing",
+  "threads": 8,
+  "mem_mb": 64000,
+  "sort_mem_mb": 1024,
+  "sjdb_overhang": 149,
+  "min_length": 25,
+  "quality_window": 6,
+  "quality_mean": 25,
+  "min_mapq": 25,
+  "max_mismatch_fraction": 0.15,
+  "min_score_fraction": 0.3,
+  "min_match_fraction": 0.3,
+  "multimap_max": 20,
+  "poly_g": "auto",
+  "adapter_r1": "",
+  "adapter_r2": ""
+}

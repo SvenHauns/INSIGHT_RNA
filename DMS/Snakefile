@@ -7,7 +7,8 @@ SAMPLES = set()
 sample_dict = {}
 SAMPLES = config["samples"].split(",")
 GFF_Path = config["gff_path"]
-GENOME = config["genome"]
+GENOME = config.get("genome", "hg38")
+GENOME_FASTA = config.get("genome_fasta")
 
 
 MAPPED_DIR = config["mapped"]
@@ -17,35 +18,83 @@ SEQUENCE_DIR = "sequences/"
 
 DMS_PROFILES = "profiles/"
 SVG_PROFILES = "svgs/"
-BIT_Data = config["bit_data"]
+BIT_Data = config.get("bit_data", "")
 FUNCTION_FILE = "in_fun.txt"
 
 RUN = config["run_type"]
+DMS_WORKERS = int(config.get("dms_workers", 1))
+DMS_JOB_MEM_MB = int(config.get("dms_job_mem_mb", 8000))
+DMS_MIN_BASE_QUALITY = int(config.get("dms_min_base_quality", 20))
+if not 0 <= DMS_MIN_BASE_QUALITY <= 93:
+    raise ValueError("dms_min_base_quality must be between 0 and 93")
+if DMS_WORKERS < 1 or DMS_JOB_MEM_MB < 1:
+    raise ValueError("dms_workers and dms_job_mem_mb must be positive")
+# Inherited by spawned workers, before numerical libraries are imported.
+DMS_PROCESS_ENV = "OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1"
+
+from pathlib import Path
+import sys
+DMS_SCRIPTS = str(Path(workflow.basedir) / "scripts")
+DMS_EXTRACTOR = str(Path(workflow.basedir) / "tools/extract_genomic_dna/extract_genomic_dna.py")
+sys.path.insert(0, DMS_SCRIPTS)
+from seismic_clustering import enabled
+DMS_RESUME_ARGS = [] if enabled(config.get("dms_resume", True)) else ["--no-resume"]
+CLUSTER_DMS = enabled(config.get("cluster_dms", False))
+if CLUSTER_DMS:
+    for key in ("cluster_reference", "cluster_regions"):
+        if not config.get(key):
+            raise ValueError(f"Clustering requires --config {key}=PATH")
+    CLUSTER_REFERENCE = config["cluster_reference"]
+    CLUSTER_REGIONS = config["cluster_regions"]
+    CLUSTER_SCAN_ARGS = ["--scan" if enabled(config.get("cluster_scan", True)) else "--no-scan"]
+    for name in ("pair_fdr", "detect_fdr", "merge_fdr"):
+        value = config.get("cluster_" + name)
+        if value is not None:
+            if not 0 < float(value) <= 1:
+                raise ValueError(f"cluster_{name} must be in (0, 1]")
+            CLUSTER_SCAN_ARGS += ["--" + name.replace("_", "-"), str(value)]
+    if enabled(config.get("cluster_validate_gaps", False)):
+        CLUSTER_SCAN_ARGS += ["--validate-gaps"]
+    for key, default in (("cluster_max_clusters", 3), ("cluster_min_info", 1000), ("cluster_threads", 4)):
+        if int(config.get(key, default)) < 1:
+            raise ValueError(f"{key} must be positive")
+CLUSTER_TARGETS = expand("clusters/{sample}.summary.json", sample=SAMPLES) if CLUSTER_DMS else []
+
+if config.get("integration_dms_source", "bulk") == "clustered" and not CLUSTER_DMS:
+    raise ValueError("Clustered-only DMS targets require cluster_dms=true")
+BULK_DMS_TARGETS = [] if config.get("integration_dms_source", "bulk") == "clustered" else [
+    *expand(f"{COVERAGE_DIR}{{sample}}.filtered_all.pkl", sample=SAMPLES),
+    *expand(f"{COVERAGE_DIR}{{sample}}.filtered_all_formated.txt", sample=SAMPLES),
+    *expand(f"{COVERAGE_DIR}{{sample}}.filtered_all.bed", sample=SAMPLES),
+    *expand(f"{SEQUENCE_DIR}{{sample}}.filtered_all_sequences.bed", sample=SAMPLES),
+    *expand(f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_90_20.txt", sample=SAMPLES),
+]
 
 rule all:
     input:
-        expand(f"{COVERAGE_DIR}{{sample}}.filtered_all.pkl", sample=SAMPLES),
-        expand(f"{COVERAGE_DIR}{{sample}}.filtered_all_formated.txt", sample=SAMPLES),
-        expand(f"{COVERAGE_DIR}{{sample}}.filtered_all.bed", sample=SAMPLES),
-        expand(f"{COVERAGE_DIR}{{sample}}.filtered_all_fixed.bed", sample=SAMPLES),
-        expand(f"{SEQUENCE_DIR}{{sample}}.filtered_all_sequences.bed", sample=SAMPLES),
-        expand(f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_90_20.txt", sample=SAMPLES),
+        CLUSTER_TARGETS,
+        BULK_DMS_TARGETS,
 
 
 rule get_target_regions:
     input:
-        lambda wildcards: f"{MAPPED_DIR}{wildcards.sample}.filtered.bam"
+        bam = lambda wildcards: f"{MAPPED_DIR}{wildcards.sample}.filtered.bam",
+        annotation = GFF_Path,
+        bai = lambda wc: f"{MAPPED_DIR}{wc.sample}.filtered.bam.bai"
     output:
         f"{COVERAGE_DIR}{{sample}}.filtered_99_20.pkl",
         f"{COVERAGE_DIR}{{sample}}.filtered_95_20.pkl",
         f"{COVERAGE_DIR}{{sample}}.filtered_90_20.pkl",
         f"{COVERAGE_DIR}{{sample}}.filtered_all.pkl"
+    threads: DMS_WORKERS
+    resources:
+        mem_mb=DMS_JOB_MEM_MB,
     conda:
         "envs/pysam.yaml"
     shell:
         """
         mkdir -p {COVERAGE_DIR}
-        python DMS/scripts/get_candidates.py --gff_path {GFF_Path} --bamfile {input} --target_folder {COVERAGE_DIR} --run_type {RUN}
+        env {DMS_PROCESS_ENV} python {DMS_SCRIPTS:q}/get_candidates.py --workers {threads} {DMS_RESUME_ARGS:q} --min-base-quality {DMS_MIN_BASE_QUALITY} --gff_path {GFF_Path:q} --bamfile {input.bam:q} --target_folder {COVERAGE_DIR} --run_type {RUN}
         """
         
 rule convert_to_list:
@@ -57,7 +106,7 @@ rule convert_to_list:
     output:
         output1_formated = f"{COVERAGE_DIR}{{sample}}.filtered_99_20_formated.txt",
         output2_formated = f"{COVERAGE_DIR}{{sample}}.filtered_95_20_formated.txt",
-        output3_formated = f"{COVERAGE_DIR}{{sample}}.filtered_90_5_formated.txt",
+        output3_formated = f"{COVERAGE_DIR}{{sample}}.filtered_90_20_formated.txt",
         output4_formated = f"{COVERAGE_DIR}{{sample}}.filtered_all_formated.txt",
         output1 = f"{COVERAGE_DIR}{{sample}}.filtered_99_20.txt",
         output2 = f"{COVERAGE_DIR}{{sample}}.filtered_95_20.txt",
@@ -69,10 +118,10 @@ rule convert_to_list:
     shell:
         """
         mkdir -p {COVERAGE_DIR}
-        python DMS/scripts/create_list2_ref.py --output {output.output1} --formated_output {output.output1_formated} --input {input.input1}
-        python DMS/scripts/create_list2_ref.py --output {output.output2} --formated_output {output.output2_formated} --input {input.input2}
-        python DMS/scripts/create_list2_ref.py --output {output.output3} --formated_output {output.output3_formated} --input {input.input3}
-        python DMS/scripts/create_list2_ref.py --output {output.output4} --formated_output {output.output4_formated} --input {input.input4}
+        python {DMS_SCRIPTS:q}/create_list2_ref.py --output {output.output1} --formated_output {output.output1_formated} --input {input.input1}
+        python {DMS_SCRIPTS:q}/create_list2_ref.py --output {output.output2} --formated_output {output.output2_formated} --input {input.input2}
+        python {DMS_SCRIPTS:q}/create_list2_ref.py --output {output.output3} --formated_output {output.output3_formated} --input {input.input3}
+        python {DMS_SCRIPTS:q}/create_list2_ref.py --output {output.output4} --formated_output {output.output4_formated} --input {input.input4}
         """
         
         
@@ -92,57 +141,57 @@ rule get_bed_file:
     shell:
         """
         mkdir -p {COVERAGE_DIR}
-        python DMS/scripts/create_bed_from_list.py --folder {COVERAGE_DIR} --input {input.input1}
-        python DMS/scripts/create_bed_from_list.py --folder {COVERAGE_DIR} --input {input.input2}
-        python DMS/scripts/create_bed_from_list.py --folder {COVERAGE_DIR} --input {input.input3}
-        python DMS/scripts/create_bed_from_list.py --folder {COVERAGE_DIR} --input {input.input4}
+        python {DMS_SCRIPTS:q}/create_bed_from_list.py --folder {COVERAGE_DIR} --input {input.input1}
+        python {DMS_SCRIPTS:q}/create_bed_from_list.py --folder {COVERAGE_DIR} --input {input.input2}
+        python {DMS_SCRIPTS:q}/create_bed_from_list.py --folder {COVERAGE_DIR} --input {input.input3}
+        python {DMS_SCRIPTS:q}/create_bed_from_list.py --folder {COVERAGE_DIR} --input {input.input4}
         """
         
         
-rule fix_bed:
-    input:       
-        input1 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_99_20.bed",
-        input2 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_95_20.bed",
-        input3 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_90_20.bed",
-        input4 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_all.bed"
-    output:
-        output1 = f"{COVERAGE_DIR}{{sample}}.filtered_99_20_fixed.bed",
-        output2 = f"{COVERAGE_DIR}{{sample}}.filtered_95_20_fixed.bed",
-        output3 = f"{COVERAGE_DIR}{{sample}}.filtered_90_20_fixed.bed",
-        output4 = f"{COVERAGE_DIR}{{sample}}.filtered_all_fixed.bed"
-    conda:
-        "envs/pysam.yaml"
-    shell:
-        """
-        mkdir -p {COVERAGE_DIR}
-        python DMS/scripts/fix_bed.py --output {output.output1} --input {input.input1}
-        python DMS/scripts/fix_bed.py --output {output.output2} --input {input.input2}
-        python DMS/scripts/fix_bed.py --output {output.output3} --input {input.input3}
-        python DMS/scripts/fix_bed.py --output {output.output4} --input {input.input4}
-        """
+if GENOME_FASTA:
+    rule extract_genomic_dna:
+        input:
+            beds=lambda wc: [f"{COVERAGE_DIR}{wc.sample}.filtered_{level}.bed"
+                             for level in ("99_20", "95_20", "90_20", "all")],
+            fasta=GENOME_FASTA,
+            fai=GENOME_FASTA + ".fai",
+        output:
+            f"{SEQUENCE_DIR}{{sample}}.filtered_99_20_sequences.bed",
+            f"{SEQUENCE_DIR}{{sample}}.filtered_95_20_sequences.bed",
+            f"{SEQUENCE_DIR}{{sample}}.filtered_90_20_sequences.bed",
+            f"{SEQUENCE_DIR}{{sample}}.filtered_all_sequences.bed",
+        conda:
+            "envs/pysam.yaml"
+        shell:
+            """
+            python {DMS_SCRIPTS:q}/extract_fasta.py --fasta {input.fasta:q} \\
+                --beds {input.beds:q} --outputs {output:q}
+            """
+else:
+    rule extract_genomic_dna:
+        input:
+            input1 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_99_20.bed",
+            input2 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_95_20.bed",
+            input3 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_90_20.bed",
+            input4 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_all.bed",
+            genome = BIT_Data
+        output:
+            output1 = f"{SEQUENCE_DIR}{{sample}}.filtered_99_20_sequences.bed",
+            output2 = f"{SEQUENCE_DIR}{{sample}}.filtered_95_20_sequences.bed",
+            output3 = f"{SEQUENCE_DIR}{{sample}}.filtered_90_20_sequences.bed",
+            output4 = f"{SEQUENCE_DIR}{{sample}}.filtered_all_sequences.bed"
+        conda:
+            "envs/extract.yaml"
+        shell:
+            """
+            mkdir -p {SEQUENCE_DIR}
+            python {DMS_EXTRACTOR:q} --input {input.input1} --genome {GENOME} --input_format interval --columns '1,2,3,6,4'  --reference_genome_source cached --reference_genome {BIT_Data:q} --output_format fasta --fasta_header_type bedtools_getfasta_default --output  {output.output1}
+            python {DMS_EXTRACTOR:q} --input {input.input2} --genome {GENOME} --input_format interval --columns '1,2,3,6,4'  --reference_genome_source cached --reference_genome {BIT_Data:q} --output_format fasta --fasta_header_type bedtools_getfasta_default --output  {output.output2}
+            python {DMS_EXTRACTOR:q} --input {input.input3} --genome {GENOME} --input_format interval --columns '1,2,3,6,4'  --reference_genome_source cached --reference_genome {BIT_Data:q} --output_format fasta --fasta_header_type bedtools_getfasta_default --output  {output.output3}
+            python {DMS_EXTRACTOR:q} --input {input.input4} --genome {GENOME} --input_format interval --columns '1,2,3,6,4'  --reference_genome_source cached --reference_genome {BIT_Data:q} --output_format fasta --fasta_header_type bedtools_getfasta_default --output  {output.output4}
+            """
+        
 
-rule extract_genomic_dna:
-    input:       
-        input1 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_99_20_fixed.bed",
-        input2 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_95_20_fixed.bed",
-        input3 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_90_20_fixed.bed",
-        input4 = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_all_fixed.bed"
-    output:
-        output1 = f"{SEQUENCE_DIR}{{sample}}.filtered_99_20_sequences.bed",
-        output2 = f"{SEQUENCE_DIR}{{sample}}.filtered_95_20_sequences.bed",
-        output3 = f"{SEQUENCE_DIR}{{sample}}.filtered_90_20_sequences.bed",
-        output4 = f"{SEQUENCE_DIR}{{sample}}.filtered_all_sequences.bed"
-    conda:
-        "envs/extract.yaml"
-    shell:
-        """
-        mkdir -p {SEQUENCE_DIR}
-        python DMS/tools/extract_genomic_dna/extract_genomic_dna.py --input {input.input1} --genome {GENOME} --input_format interval --columns '1,2,3,6,4'  --reference_genome_source cached --reference_genome {BIT_Data} --output_format fasta --fasta_header_type bedtools_getfasta_default --output  {output.output1}
-        python DMS/tools/extract_genomic_dna/extract_genomic_dna.py --input {input.input2} --genome {GENOME} --input_format interval --columns '1,2,3,6,4'  --reference_genome_source cached --reference_genome {BIT_Data} --output_format fasta --fasta_header_type bedtools_getfasta_default --output  {output.output2}
-        python DMS/tools/extract_genomic_dna/extract_genomic_dna.py --input {input.input3} --genome {GENOME} --input_format interval --columns '1,2,3,6,4'  --reference_genome_source cached --reference_genome {BIT_Data} --output_format fasta --fasta_header_type bedtools_getfasta_default --output  {output.output3}
-        python DMS/tools/extract_genomic_dna/extract_genomic_dna.py --input {input.input4} --genome {GENOME} --input_format interval --columns '1,2,3,6,4'  --reference_genome_source cached --reference_genome {BIT_Data} --output_format fasta --fasta_header_type bedtools_getfasta_default --output  {output.output4}
-        """
-        
 
 rule extract_dms_profiles:
     input:
@@ -150,10 +199,11 @@ rule extract_dms_profiles:
         input2_seq = lambda wildcards: f"{SEQUENCE_DIR}{wildcards.sample}.filtered_95_20_sequences.bed",
         input3_seq = lambda wildcards: f"{SEQUENCE_DIR}{wildcards.sample}.filtered_90_20_sequences.bed",
         input4_seq = lambda wildcards: f"{SEQUENCE_DIR}{wildcards.sample}.filtered_all_sequences.bed",
-        input1_fixed_bed = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_99_20_fixed.bed",
-        input2_fixed_bed = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_95_20_fixed.bed",
-        input3_fixed_bed = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_90_20_fixed.bed",
-        input4_fixed_bed = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_all_fixed.bed",
+        input1_bed = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_99_20.bed",
+        input2_bed = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_95_20.bed",
+        input3_bed = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_90_20.bed",
+        input4_bed = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_all.bed",
+        bai = lambda wc: f"{MAPPED_DIR}{wc.sample}.filtered.bam.bai",
         input_bam = lambda wildcards: f"{MAPPED_DIR}{wildcards.sample}.filtered.bam",
         input1_coverage_list = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_99_20.txt",
         input2_coverage_list = lambda wildcards: f"{COVERAGE_DIR}{wildcards.sample}.filtered_95_20.txt",
@@ -174,6 +224,9 @@ rule extract_dms_profiles:
         output2_changed_dict = f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_95_20_changed_dict.pkl",
 
 
+    threads: DMS_WORKERS
+    resources:
+        mem_mb=DMS_JOB_MEM_MB,
     conda:
         "envs/pysam.yaml"
     params:
@@ -181,41 +234,64 @@ rule extract_dms_profiles:
     shell:
         """
         mkdir -p {DMS_PROFILES}
-        mkdir -p {DMS_PROFILES}{{sample}}/{SVG_PROFILES}
+        mkdir -p {params.output_dict:q}
         
         
-        python DMS/scripts/create_profile.py --coverage_list {input.input3_coverage_list} --extracted_sequences {input.input3_seq} \\
-        --fixed_bed_file {input.input3_fixed_bed} --bam_file {input.input_bam} --save_path {params.output_dict} --output_file {output.output3} \\
-        --stable_dict {output.output3_stable_dict} --changed_dict {output.output3_changed_dict}
-        python DMS/scripts/create_profile.py --coverage_list {input.input1_coverage_list} --extracted_sequences {input.input1_seq} \\
-        --fixed_bed_file {input.input1_fixed_bed} --bam_file {input.input_bam} --save_path {params.output_dict} --output_file {output.output1} \\
-        --stable_dict {output.output1_stable_dict} --changed_dict {output.output1_changed_dict}
-        python DMS/scripts/create_profile.py --coverage_list {input.input2_coverage_list} --extracted_sequences {input.input2_seq} \\
-        --fixed_bed_file {input.input2_fixed_bed} --bam_file {input.input_bam} --save_path {params.output_dict} --output_file {output.output2} \\
-        --stable_dict {output.output2_stable_dict} --changed_dict {output.output2_changed_dict}
+        env {DMS_PROCESS_ENV} python {DMS_SCRIPTS:q}/create_profile.py --workers {threads} {DMS_RESUME_ARGS:q} --min-base-quality {DMS_MIN_BASE_QUALITY} --coverage_list {input.input3_coverage_list:q} --extracted_sequences {input.input3_seq:q} \\
+        --bed_file {input.input3_bed:q} --bam_file {input.input_bam:q} --save_path {params.output_dict:q} --output_file {output.output3:q} \\
+        --stable_dict {output.output3_stable_dict:q} --changed_dict {output.output3_changed_dict:q}
+        env {DMS_PROCESS_ENV} python {DMS_SCRIPTS:q}/create_profile.py --workers {threads} {DMS_RESUME_ARGS:q} --min-base-quality {DMS_MIN_BASE_QUALITY} --coverage_list {input.input1_coverage_list:q} --extracted_sequences {input.input1_seq:q} \\
+        --bed_file {input.input1_bed:q} --bam_file {input.input_bam:q} --save_path {params.output_dict:q} --output_file {output.output1:q} \\
+        --stable_dict {output.output1_stable_dict:q} --changed_dict {output.output1_changed_dict:q}
+        env {DMS_PROCESS_ENV} python {DMS_SCRIPTS:q}/create_profile.py --workers {threads} {DMS_RESUME_ARGS:q} --min-base-quality {DMS_MIN_BASE_QUALITY} --coverage_list {input.input2_coverage_list:q} --extracted_sequences {input.input2_seq:q} \\
+        --bed_file {input.input2_bed:q} --bam_file {input.input_bam:q} --save_path {params.output_dict:q} --output_file {output.output2:q} \\
+        --stable_dict {output.output2_stable_dict:q} --changed_dict {output.output2_changed_dict:q}
         """
         
         
+# Explicitly requested optional summaries; never part of the default targets.
 rule retrieve_rna_structure:
-    input:             
-        input1 =  lambda wildcards: f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_99_20.txt",
-        input2 =  lambda wildcards: f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_95_20.txt",
-        input3 =  lambda wildcards: f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_90_20.txt",
-        input4 =  lambda wildcards: f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_all.txt",
+    input:
+        profile=f"{DMS_PROFILES}{{sample}}/{{sample}}.dms_coverage_{{coverage}}_20.txt",
     output:
-        output1 = f"{DMS_PROFILES}{{sample}}.filtered_99_20_summary.txt",
-        output2 = f"{DMS_PROFILES}{{sample}}.filtered_95_20_summary.txt",
-        output3 = f"{DMS_PROFILES}{{sample}}.filtered_90_20_summary.txt",
-        output4 = f"{DMS_PROFILES}{{sample}}.filtered_all_summary.txt"
+        summary=f"{DMS_PROFILES}{{sample}}.filtered_{{coverage}}_20_summary.txt",
+        structures=directory(f"{DMS_PROFILES}{{sample}}/structures_{{coverage}}_20"),
+    wildcard_constraints:
+        coverage="99|95|90",
     conda:
-        "envs/pysam.yaml"
+        "envs/fold.yaml"
     shell:
         """
-        mkdir -p {COVERAGE_DIR}
-        python DMS/scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input1} --structure_folder {} --summary {output.output1}
-        python DMS/scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input2} --structure_folder {} --summary {output.output2}
-        python DMS/scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input3} --structure_folder {} --summary {output.output13}
-        python DMS/scripts/retrieve_rna_struc.py --function_file {FUNCTION_FILE} --target_folder {input.input4} --structure_folder {} --summary {output.output4}
+        python {DMS_SCRIPTS:q}/retrieve_rna_struc.py --profiles {input.profile:q} \\
+            --output-dir {output.structures:q} --summary {output.summary:q}
         """
-        
 
+
+if CLUSTER_DMS:
+    rule cluster_dms:
+        input:
+            bam=lambda wc: str(Path(MAPPED_DIR) / (wc.sample + ".filtered.bam")),
+            bai=lambda wc: str(Path(MAPPED_DIR) / (wc.sample + ".filtered.bam.bai")),
+            fasta=CLUSTER_REFERENCE,
+            regions=CLUSTER_REGIONS,
+        output:
+            data=directory("clusters/{sample}"),
+            summary="clusters/{sample}.summary.json",
+        threads: int(config.get("cluster_threads", 4))
+        resources:
+            mem_mb=int(config.get("cluster_mem_mb", 16000)),
+        params:
+            max_clusters=int(config.get("cluster_max_clusters", 3)),
+            min_info=int(config.get("cluster_min_info", 1000)),
+            scan_args=CLUSTER_SCAN_ARGS,
+        log: "clusters/{sample}.log"
+        conda: "envs/seismic.yaml"
+        shell:
+            """
+            mkdir -p clusters
+            python {DMS_SCRIPTS:q}/seismic_clustering.py \
+                --bam {input.bam:q} --fasta {input.fasta:q} --regions {input.regions:q} \
+                --sample {wildcards.sample:q} --output {output.data:q} --summary {output.summary:q} \
+                --cpus {threads} --max-clusters {params.max_clusters} --min-info {params.min_info} {params.scan_args:q} {DMS_RESUME_ARGS:q} \
+                > {log:q} 2>&1
+            """

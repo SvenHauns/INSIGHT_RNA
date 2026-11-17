@@ -1,0 +1,10 @@
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.13
+  - pip
+  - samtools=1.21
+  - bowtie2>=2.5.5,<3
+  - pip:
+      - seismic-rna==0.26.0

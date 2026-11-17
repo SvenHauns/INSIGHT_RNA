@@ -1,0 +1,117 @@
+"""DMS FASTQs -> one coordinate-sorted genomic BAM per biological sample."""
+from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(workflow.basedir) / "scripts"))
+from preprocess_utils import validate_config, load_samples, samples_to_runs
+
+CFG = validate_config(config)
+RUNS = load_samples(CFG["samples"])
+SAMPLES = samples_to_runs(RUNS)
+OUT = CFG["output"]
+REFERENCE = f"{OUT}/reference/genome.fa"
+INDEX = CFG.get("star_index") or f"{OUT}/reference/star_index"
+ENV = "envs/preprocess.yaml"
+
+rule all:
+    input:
+        expand(f"{OUT}/mapped/{{sample}}.filtered.bam", sample=SAMPLES),
+        expand(f"{OUT}/mapped/{{sample}}.filtered.bam.bai", sample=SAMPLES),
+        expand(f"{OUT}/qc/{{sample}}.flagstat.txt", sample=SAMPLES),
+        expand(f"{OUT}/qc/{{sample}}.idxstats.tsv", sample=SAMPLES),
+        expand(f"{OUT}/qc/{{sample}}.provenance.json", sample=SAMPLES),
+        expand(f"{OUT}/qc/fastp/{{run}}.json", run=RUNS),
+        expand(f"{OUT}/qc/fastp/{{run}}.html", run=RUNS),
+
+rule prepare_reference:
+    input:
+        fasta=CFG["genome_fasta"],
+        gtf=CFG["annotation_gtf"],
+    output:
+        fasta=REFERENCE,
+        fai=REFERENCE + ".fai",
+        report=f"{OUT}/reference/reference_check.json",
+    params:
+        action="reference", settings=CFG,
+    conda: ENV
+    script: "scripts/step.py"
+
+if not CFG.get("star_index"):
+    rule build_star_index:
+        input:
+            fasta=REFERENCE,
+            fai=REFERENCE + ".fai",
+            report=f"{OUT}/reference/reference_check.json",
+            gtf=CFG["annotation_gtf"],
+        output:
+            index=directory(INDEX),
+        log: f"{OUT}/logs/star_index.log"
+        threads: CFG["threads"]
+        resources:
+            mem_mb=CFG["mem_mb"],
+        params:
+            action="index", settings=CFG,
+        conda: ENV
+        script: "scripts/step.py"
+
+rule trim_reads:
+    input:
+        r1=lambda wc: RUNS[wc.run]["r1"],
+        r2=lambda wc: RUNS[wc.run]["r2"],
+    output:
+        r1=temp(f"{OUT}/trimmed/{{run}}_1.fastq.gz"),
+        r2=temp(f"{OUT}/trimmed/{{run}}_2.fastq.gz"),
+        json=f"{OUT}/qc/fastp/{{run}}.json",
+        html=f"{OUT}/qc/fastp/{{run}}.html",
+    log: f"{OUT}/logs/fastp/{{run}}.log"
+    threads: min(CFG["threads"], 8)
+    resources:
+        mem_mb=4096,
+    params:
+        action="trim", settings=CFG,
+    conda: ENV
+    script: "scripts/step.py"
+
+rule align_sample:
+    input:
+        r1=lambda wc: [f"{OUT}/trimmed/{run}_1.fastq.gz" for run in SAMPLES[wc.sample]],
+        r2=lambda wc: [f"{OUT}/trimmed/{run}_2.fastq.gz" for run in SAMPLES[wc.sample]],
+        index=INDEX,
+        fasta=REFERENCE,
+        fai=REFERENCE + ".fai",
+        report=f"{OUT}/reference/reference_check.json",
+        gtf=CFG["annotation_gtf"],
+    output:
+        bam=temp(f"{OUT}/aligned/{{sample}}.sorted.bam"),
+        star_log=f"{OUT}/qc/star/{{sample}}.Log.final.out",
+    log: f"{OUT}/logs/align/{{sample}}.log"
+    threads: CFG["threads"]
+    resources:
+        mem_mb=CFG["mem_mb"],
+    params:
+        action="align", settings=CFG,
+    conda: ENV
+    script: "scripts/step.py"
+
+rule finalize_bam:
+    input:
+        bam=f"{OUT}/aligned/{{sample}}.sorted.bam",
+        fasta=REFERENCE,
+        fai=REFERENCE + ".fai",
+        star_log=f"{OUT}/qc/star/{{sample}}.Log.final.out",
+        sample_table=CFG["samples"],
+    output:
+        bam=f"{OUT}/mapped/{{sample}}.filtered.bam",
+        bai=f"{OUT}/mapped/{{sample}}.filtered.bam.bai",
+        flagstat=f"{OUT}/qc/{{sample}}.flagstat.txt",
+        idxstats=f"{OUT}/qc/{{sample}}.idxstats.tsv",
+        provenance=f"{OUT}/qc/{{sample}}.provenance.json",
+    log: f"{OUT}/logs/finalize/{{sample}}.log"
+    threads: CFG["threads"]
+    resources:
+        mem_mb=4096,
+    params:
+        action="finalize", settings=CFG,
+        runs=lambda wc: [RUNS[run] for run in SAMPLES[wc.sample]],
+    conda: ENV
+    script: "scripts/step.py"
